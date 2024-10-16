@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Purchase.Data;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,7 +12,14 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 
+var DBContextConnectionString = builder.Configuration.GetConnectionString(nameof(PurchaseContext));
+builder.Services.AddDbContextFactory<PurchaseContext>(options => options.UseNpgsql(DBContextConnectionString));
+
 var app = builder.Build();
+
+using var serviceScore = app.Services.CreateScope();
+var DBContext = serviceScore.ServiceProvider.GetRequiredService<PurchaseContext>();
+DBContext?.Database.Migrate();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
