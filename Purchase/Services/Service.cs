@@ -32,10 +32,10 @@ namespace Purchase.Services
             return await context.Proposals.ToListAsync();
         }
 
-        public async Task<Proposal> GetProposalByIdAsync(int id)
+        public async Task<Proposal> GetProposalByIdAsync(long ID)
         {
             using var context = purchaseFactory.CreateDbContext();
-            return await context.Proposals.FindAsync(id);
+            return await context.Proposals.FindAsync(ID);
         }
 
         // Update
@@ -47,10 +47,10 @@ namespace Purchase.Services
         }
 
         // Delete
-        public async Task Delete(int id)
+        public async Task Delete(long ID)
         {
             using var context = purchaseFactory.CreateDbContext();
-            var proposal = await context.Proposals.FindAsync(id);
+            var proposal = await context.Proposals.FindAsync(ID);
             if (proposal != null)
             {
                 context.Proposals.Remove(proposal);
@@ -64,9 +64,9 @@ namespace Purchase.Services
     {
         Task Create(Proposal newProposal);
         Task<List<Proposal>> GetAllProposalsAsync();
-        Task<Proposal> GetProposalByIdAsync(int id);
+        Task<Proposal> GetProposalByIdAsync(long ID);
         Task Update(Proposal updatedProposal);
-        Task Delete(int id);
+        Task Delete(long ID);
     }
 
 

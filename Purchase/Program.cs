@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
+builder.Services.AddSingleton<Service>();
 
 var DBContextConnectionString = builder.Configuration.GetConnectionString(nameof(PurchaseContext));
 builder.Services.AddDbContextFactory<PurchaseContext>(options => options.UseNpgsql(DBContextConnectionString));

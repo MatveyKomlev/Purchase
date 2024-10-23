@@ -1,6 +1,6 @@
 namespace Purchase.Data
 {
-    public class WeatherForecastService
+    public class ServiceWeatherForecast
     {
         private static readonly string[] Summaries = new[]
         {
