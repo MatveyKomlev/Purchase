@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Purchase.Data;
+using Purchase.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,8 @@ var app = builder.Build();
 using var serviceScore = app.Services.CreateScope();
 var DBContext = serviceScore.ServiceProvider.GetRequiredService<PurchaseContext>();
 DBContext?.Database.Migrate();
+
+builder.Services.AddScoped<IMyService, PurchaseService>();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -39,3 +42,5 @@ app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
 app.Run();
+
+
