@@ -6,12 +6,13 @@ using Purchase.Data;
 using Purchase.Services;
 
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<Service>();
+builder.Services.AddSingleton<PurchaseService>();
 
 var DBContextConnectionString = builder.Configuration.GetConnectionString(nameof(PurchaseContext));
 builder.Services.AddDbContextFactory<PurchaseContext>(options => options.UseNpgsql(DBContextConnectionString));
