@@ -1,14 +1,13 @@
 ﻿@page "/fetchdata"
 @using Purchase.Data
 @using Purchase.Services
-@inject PurchaseService IMyService
+@inject IMyService PurchaseService
 
+<PageTitle>Proposals</PageTitle>
 
-<PageTitle>Proposal</PageTitle>
+<h1>Proposals</h1>
 
-<h1>Proposal</h1>
-
-<p>This component demonstrates fetching data from a service.</p>
+<button class="btn btn-primary" @onclick="OnInitializedAsync">Update</button>
 
 @if (proposals == null)
 {
@@ -19,9 +18,9 @@ else
     <table class="table">
         <thead>
             <tr>
-               <th>ID</th>
+                <th>ID</th>
                 <th>ApplicationNum</th>
-                <th>Date.</th>
+                <th>Date</th>
                 <th>FullNumber</th>
                 <th>Status</th>
                 <th>TextStatus</th>
@@ -30,17 +29,17 @@ else
             </tr>
         </thead>
         <tbody>
-              @foreach (var _proposal in proposals)
+            @foreach (var proposal in proposals)
             {
                 <tr>
-                    <td>@_proposal.ID</td>
-                    <td>@_proposal.Number</td>
-                    <td>@_proposal.DateCreation</td>
-                    <td>@_proposal.FullNumber</td>
-                    <td>@_proposal.Status</td>
-                    <td>@_proposal.TextStatus</td>
-                    <td>@_proposal.Department</td>
-                    <td>@_proposal.Author</td>
+                    <td>@proposal.ID</td>
+                    <td>@proposal.ApplicationNum</td>
+                    <td>@proposal.DateCreation</td>
+                    <td>@proposal.FullNumber</td>
+                    <td>@proposal.Status</td>
+                    <td>@proposal.TextStatus</td>
+                    <td>@proposal.Division</td>
+                    <td>@proposal.Author</td>
                 </tr>
             }
         </tbody>
@@ -48,10 +47,11 @@ else
 }
 
 @code {
-    private Proposal[]? proposals;
+    private List<Proposal> proposals = new();
 
     protected override async Task OnInitializedAsync()
     {
-     // proposals = await IMyService.GetAllProposalsAsync();
+        proposals = await PurchaseService.GetAllProposals();
     }
 }
+
