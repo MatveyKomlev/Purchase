@@ -1,14 +1,16 @@
 ﻿@page "/fetchdata"
 @using Purchase.Data
-@inject WeatherForecastService ForecastService
+@using Purchase.Services
+@inject PurchaseService IMyService
 
-<PageTitle>Weather forecast</PageTitle>
 
-<h1>Weather forecast</h1>
+<PageTitle>Proposal</PageTitle>
+
+<h1>Proposal</h1>
 
 <p>This component demonstrates fetching data from a service.</p>
 
-@if (forecasts == null)
+@if (proposals == null)
 {
     <p><em>Loading...</em></p>
 }
@@ -17,20 +19,28 @@ else
     <table class="table">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Temp. (C)</th>
-                <th>Temp. (F)</th>
-                <th>Summary</th>
+               <th>ID</th>
+                <th>ApplicationNum</th>
+                <th>Date.</th>
+                <th>FullNumber</th>
+                <th>Status</th>
+                <th>TextStatus</th>
+                <th>Division</th>
+                <th>Author</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var forecast in forecasts)
+              @foreach (var _proposal in proposals)
             {
                 <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
+                    <td>@_proposal.ID</td>
+                    <td>@_proposal.Number</td>
+                    <td>@_proposal.DateCreation</td>
+                    <td>@_proposal.FullNumber</td>
+                    <td>@_proposal.Status</td>
+                    <td>@_proposal.TextStatus</td>
+                    <td>@_proposal.Department</td>
+                    <td>@_proposal.Author</td>
                 </tr>
             }
         </tbody>
@@ -38,10 +48,10 @@ else
 }
 
 @code {
-    private WeatherForecast[]? forecasts;
+    private Proposal[]? proposals;
 
     protected override async Task OnInitializedAsync()
     {
-        forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
+     // proposals = await IMyService.GetAllProposalsAsync();
     }
 }
