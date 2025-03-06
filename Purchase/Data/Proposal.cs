@@ -11,9 +11,11 @@ namespace Purchase.Data
         public int ID { get; set; }
 
         [Required]
+        [MaxLength(10)]
         public int ApplicationNum { get; set; }
 
         [Required]
+        [MaxLength(60)]
         public DateTime DateCreation { get; set; }
 
         [Required]
