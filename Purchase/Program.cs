@@ -1,31 +1,29 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.EntityFrameworkCore;
 using Purchase.Data;
 using Purchase.Services;
-
-
-
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddSingleton<PurchaseService>();
+builder.Services.AddRazorPages();
+builder.Services.AddServerSideBlazor();
+builder.Services.AddSingleton<WeatherForecastService>();
+
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var DBContextConnectionString = builder.Configuration.GetConnectionString(nameof(PurchaseContext));
 builder.Services.AddDbContext<PurchaseContext>(options => options.UseNpgsql(DBContextConnectionString));
+
 builder.Services.AddScoped<IMyService, PurchaseService>();
+
 var app = builder.Build();
 
-var DBContextConnectionString = builder.Configuration.GetConnectionString(nameof(PurchaseContext));
-builder.Services.AddDbContextFactory<PurchaseContext>(options => options.UseNpgsql(DBContextConnectionString));
 using var serviceScore = app.Services.CreateScope();
 var DBContext = serviceScore.ServiceProvider.GetRequiredService<PurchaseContext>();
 DBContext?.Database.Migrate();
 
-
-
-builder.Services.AddScoped<IMyService, PurchaseService>();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -45,3 +43,5 @@ app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
 app.Run();
+
+

@@ -7,15 +7,13 @@ namespace Purchase.Data
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Display(Name = "№")]
-        public string ID { get; set; }
+        [Display(Name = "#")]
+        public int ID { get; set; }
 
         [Required]
-        [MaxLength(10)]
-        public string Number { get; set; }
+        public int ApplicationNum { get; set; }
 
         [Required]
-        [MaxLength(60)]
         public DateTime DateCreation { get; set; }
 
         [Required]
@@ -32,7 +30,7 @@ namespace Purchase.Data
 
         [Required]
         [MaxLength(60)]
-        public string Department { get; set; }
+        public string Division { get; set; }
 
         [Required]
         [MaxLength(60)]
