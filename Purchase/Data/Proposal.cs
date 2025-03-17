@@ -11,31 +11,43 @@ namespace Purchase.Data
         public int ID { get; set; }
 
         [Required]
-        [MaxLength(10)]
-        public int ApplicationNum { get; set; }
+        /// <summary>
+        /// Номер заявки
+        /// </summary>
+        public int Number { get; set; }
 
         [Required]
-        [MaxLength(60)]
+        /// <summary>
+        /// Дата создания
+        /// </summary>
         public DateTime DateCreation { get; set; }
 
         [Required]
-        [MaxLength(60)]
-        public string FullNumber { get; set; }
+        [MaxLength(20)]
+        /// <summary>
+        /// Категория покупки
+        /// </summary>
+        public string Category { get; set; }
 
         [Required]
-        [MaxLength(60)]
-        public string Status { get; set; }
-
-        [Required]
-        [MaxLength(60)]
-        public string TextStatus { get; set; }
-
-        [Required]
-        [MaxLength(60)]
-        public string Division { get; set; }
-
-        [Required]
-        [MaxLength(60)]
+        [MaxLength(30)]
+        /// <summary>
+        /// Автор
+        /// </summary>
         public string Author { get; set; }
+
+        [Required]
+        [MaxLength(20)]
+        /// <summary>
+        /// Отдел
+        /// </summary>
+        public string Department { get; set; }
+
+        [Required]
+        [MaxLength(10)]
+        /// <summary>
+        /// Статус заказа
+        /// </summary>
+        public string Status { get; set; }
     }
 }

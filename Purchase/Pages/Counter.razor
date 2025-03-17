@@ -22,23 +22,23 @@
     {
         var proposal1 = new Proposal
             {
-                ApplicationNum = currentID1,
+                Number = currentID1,
                 DateCreation = DateTime.Now,
-                FullNumber = "123-ABC",
+                Category = "123-ABC",
                 Status = "New",
                 TextStatus = "Pending",
-                Division = "Sales",
+                Department = "Sales",
                 Author = "John Doe"
             };
 
         var proposal2 = new Proposal
             {
-                ApplicationNum = currentID2,
+                Number = currentID2,
                 DateCreation = DateTime.Now,
-                FullNumber = "456-DEF",
+                Category = "456-DEF",
                 Status = "In Progress",
                 TextStatus = "Review",
-                Division = "Finance",
+                Department = "Finance",
                 Author = "Jane Doe"
             };
 
@@ -58,12 +58,12 @@
     {
         var updatedProposal = new Proposal
             {
-                ApplicationNum = 21,
+                Number = 21,
                 DateCreation = DateTime.Now,
-                FullNumber = "789-GHI",
+                Category = "789-GHI",
                 Status = "Updated",
                 TextStatus = "Approved",
-                Division = "HR",
+                Department = "HR",
                 Author = "Alice Smith"
             };
 
