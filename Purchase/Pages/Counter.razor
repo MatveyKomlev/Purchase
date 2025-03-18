@@ -24,22 +24,20 @@
             {
                 Number = currentID1,
                 DateCreation = DateTime.Now,
-                Category = "123-ABC",
-                Status = "New",
-                TextStatus = "Pending",
-                Department = "Sales",
-                Author = "John Doe"
+                Category = "Платы",
+                Author = "Дмитрий Кузьмин",
+                Department = "Отдел производства",
+                Status = "в процессе"
             };
 
         var proposal2 = new Proposal
             {
                 Number = currentID2,
                 DateCreation = DateTime.Now,
-                Category = "456-DEF",
-                Status = "In Progress",
-                TextStatus = "Review",
-                Department = "Finance",
-                Author = "Jane Doe"
+                Category = "Инструменты",
+                Author = "Артем Лебедев",
+                Department = "Отдел производства",
+                Status = "в процессе"
             };
 
         await PurchaseService.Create(proposal1); // Создание заявки
@@ -60,11 +58,10 @@
             {
                 Number = 21,
                 DateCreation = DateTime.Now,
-                Category = "789-GHI",
-                Status = "Updated",
-                TextStatus = "Approved",
-                Department = "HR",
-                Author = "Alice Smith"
+                Category = "Диоды",
+                Author = "Иван Петров",
+                Department = "Отдел исследований",
+                Status = "в процессе"
             };
 
         await PurchaseService.Update(updatedProposal); // Обновление заявки
