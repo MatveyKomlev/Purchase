@@ -1,70 +1,139 @@
 ﻿@page "/counter"
 @using Purchase.Data
 @using Purchase.Services
+@using Blazorise.DataGrid
 @inject IMyService PurchaseService
+@using System.ComponentModel;
+
 
 <PageTitle>Counter</PageTitle>
 
 <h1>Counter</h1>
 
-<p role="status">Current Proposal ID: @currentID1</p>
-<p role="status">Current Proposal ID: @currentID2</p>
+<!-- Кнопки для операций с заявками -->
+<Button Color="Color.Primary" @onclick="Create">Создать</Button>
+<Button Color="Color.Primary" @onclick="Delete">Удалить</Button>
+<Button Color="Color.Primary" @onclick="Update">Обновить</Button>
 
-<button class="btn btn-primary" @onclick="Create">Создать</button>
-<button class="btn btn-primary" @onclick="Delete">Удалить</button>
-<button class="btn btn-primary" @onclick="Update">Обновить</button>
-<input type="text" class="textbox" placeholder="Поиск" />
+<!-- Поля для ввода данных -->
+<div>
+    <label>Категория:</label>
+    <select @bind="selectedCategory">
+        @foreach (var category in Enum.GetValues<Category>())
+        {
+            <option value="@category">@category.GetDescription()</option>
+        }
+    </select>
+
+    <label>Автор:</label>
+    <input type="text" class="textbox" placeholder="Введите полное имя" @bind="@author" />
+
+    <label>Отдел:</label>
+    <select @bind="selectedDepartment">
+        @foreach (var department in Enum.GetValues<Department>())
+        {
+            <option value="@department">@department.GetDescription()</option>
+        }
+    </select>
+
+    <label>Статус:</label>
+    <select @bind="statusText">
+        @foreach (var statusText in Enum.GetValues<StatusText>())
+        {
+            <option value="@statusText">@statusText.GetDescription()</option>
+        }
+    </select>
+
+    <label>Удаление:</label>
+    <input type="text" class="textbox" placeholder=" Введите id для удаления" @bind="@del" />
+</div>
+
+<!-- Поле для поиска -->
+<input type="text" class="textbox" placeholder="Поиск" @bind="@searchText" />
+
+@if (proposals == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <DataGrid TItem="Proposal" Data="@proposals" ShowPager="true" PageSize="5" Striped="true" Bordered="true">
+        <DataGridColumns>
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="ID" Sortable="true" />
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер">
+                <DisplayTemplate>
+                    @context.Number
+                </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" Sortable="true">
+                <DisplayTemplate>
+                    @context.DateCreation.ToString("dd.MM.yyyy")
+                </DisplayTemplate>
+            </DataGridColumn>
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Category)" Caption="Категория" />
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
+            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" />
+        </DataGridColumns>
+    </DataGrid>
+}
 
 @code {
-    private int currentID1 = 20;
-    private int currentID2 = 21;
+    private string searchText = string.Empty;
+    private List<Proposal> proposals;
+
+    // Переменные для хранения значений, введенных пользователем
+    private string category;
+    private string author;
+    private string department;
+    private StatusText statusText = StatusText.InProgress; // Начальное значение для статуса
+    private Department selectedDepartment = Department.Department_A;
+    private Category selectedCategory = Category.Category_1;
+    private string del;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        proposals = await PurchaseService.GetAllProposals();
+    }
 
     private async void Create()
     {
-        var proposal1 = new Proposal
+        var newProposal = new Proposal
             {
-                Number = currentID1,
-                DateCreation = DateTime.Now,
-                Category = "Платы",
-                Author = "Дмитрий Кузьмин",
-                Department = "Отдел производства",
-                Status = "в процессе"
+                Author = author,
+                Category = selectedCategory.GetDescription(),
+                Department = selectedDepartment.GetDescription(),
+                Status = statusText.GetDescription(),  // Преобразуем статус в строку для сохранения
+                Number = proposals.Count == 0 ? 1 : proposals.Max(p => p.Number) + 1, // тут пока логика инкремента как в бд (опционально - переделать потом)
+                DateCreation = DateTime.Now
             };
 
-        var proposal2 = new Proposal
-            {
-                Number = currentID2,
-                DateCreation = DateTime.Now,
-                Category = "Инструменты",
-                Author = "Артем Лебедев",
-                Department = "Отдел производства",
-                Status = "в процессе"
-            };
+        if (newProposal.Author == null) { return; } // проверка на пустое поле автора записи
 
-        await PurchaseService.Create(proposal1); // Создание заявки
-        await PurchaseService.Create(proposal2);
-
-        currentID1 += 2;
-        currentID2 += 2;
+        await PurchaseService.Create(newProposal);
+        author = string.Empty; // Очистить поля после сохранения
+        await LoadData();
     }
 
     private async void Delete()
     {
-        await PurchaseService.Delete(6); // Удаление заявки
+        if (del == null || del == "") { return; }
+        await PurchaseService.Delete(Convert.ToInt32(del));
+        await LoadData();
+        del = string.Empty;
     }
 
     private async void Update()
     {
-        var updatedProposal = new Proposal
-            {
-                Number = 21,
-                DateCreation = DateTime.Now,
-                Category = "Диоды",
-                Author = "Иван Петров",
-                Department = "Отдел исследований",
-                Status = "в процессе"
-            };
-
-        await PurchaseService.Update(updatedProposal); // Обновление заявки
+        await LoadData();
     }
+     
+
 }
+
+

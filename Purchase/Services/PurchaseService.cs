@@ -25,9 +25,11 @@ public class PurchaseService : IMyService
         //await context.Proposals.AddAsync(newProposal);
         //await context.SaveChangesAsync();
         using (var context = CreateDbContext())
-        {
-            context.Proposals.Add(newProposal);
-            await context.SaveChangesAsync();
+        {   if (newProposal.Author != null) {
+                context.Proposals.Add(newProposal);
+                await context.SaveChangesAsync();
+                }
+            else return;
         }
     }
     // Read
@@ -60,12 +62,40 @@ public class PurchaseService : IMyService
     {
         using (var context = CreateDbContext())
         {
+            if (id >= 1) { 
             var proposal = await context.Proposals.FindAsync(id);
-            if (proposal != null)
-            {
-                context.Proposals.Remove(proposal);
-                await context.SaveChangesAsync();
+                try
+                {
+                    context.Proposals.Remove(proposal);
+                    await context.SaveChangesAsync();
+                    await ReorderNumbers();
+                }catch{ return; }
             }
+          }
+            
+           
+           
+        
+    }
+
+    // Метод для перезаписи номеров в базе данных
+    public async Task ReorderNumbers()
+    {
+        using (var context = CreateDbContext())
+        {
+            var proposals = await context.Proposals
+                                         .OrderBy(p => p.DateCreation) // Сортируем по дате создания или другому полю
+                                         .ToListAsync();
+
+        int counter = 1;
+        foreach (var proposal in proposals)
+        {
+            proposal.Number = counter;
+            counter++;
+        }
+
+        // Сохраняем изменения
+        await context.SaveChangesAsync();
         }
     }
 }
