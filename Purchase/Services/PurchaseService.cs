@@ -6,107 +6,94 @@ using System.Runtime.InteropServices;
 using Purchase.Data;
 
 namespace Purchase.Services;
+
 public class PurchaseService : IMyService
 {
-    private readonly DbContextOptions<PurchaseContext> _purchaseFactory;
+    private readonly IDbContextFactory<PurchaseContext> _purchaseFactory;
 
-    public PurchaseService(DbContextOptions<PurchaseContext> purchaseFactory)
+    public PurchaseService(IDbContextFactory<PurchaseContext> purchaseFactory)
     {
         _purchaseFactory = purchaseFactory;
     }
-    private PurchaseContext CreateDbContext()
+
+    private async Task<PurchaseContext> CreateDbContextAsync()
     {
-        return new PurchaseContext(_purchaseFactory);
+        return await _purchaseFactory.CreateDbContextAsync();
     }
+
     // Create
     public async Task Create(Proposal newProposal)
     {
-        //using var context = _purchaseFactory.CreateDbContext();
-        //await context.Proposals.AddAsync(newProposal);
-        //await context.SaveChangesAsync();
-        using (var context = CreateDbContext())
-        {   if (newProposal.Author != null) {
-                context.Proposals.Add(newProposal);
-                await context.SaveChangesAsync();
-                }
-            else return;
-        }
+        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department))
+            return;
+
+        await using var context = await CreateDbContextAsync();
+        await context.Proposals.AddAsync(newProposal);
+        await context.SaveChangesAsync();
     }
+
     // Read
     public async Task<List<Proposal>> GetAllProposals()
     {
-        using (var context = CreateDbContext())
-        {
-            return await context.Proposals.ToListAsync();
-        }
+        await using var context = await CreateDbContextAsync();
+        return await context.Proposals.ToListAsync();
     }
-
-    //public async Task<Proposal> GetProposalByIdAsync(int id)
-    //{
-    //    using var context = _purchaseFactory.CreateDbContext();
-    //    return await context.Proposals.FindAsync(id);
-    //}
 
     // Update
     public async Task Update(Proposal updatedProposal)
     {
-        using (var context = CreateDbContext())
-        {
-            context.Proposals.Update(updatedProposal);
-            await context.SaveChangesAsync();
-        }
+        await using var context = await CreateDbContextAsync();
+        var proposal = await context.Proposals.AsTracking().FirstOrDefaultAsync(x => x.ID == updatedProposal.ID);
+        
+        if (proposal == null)
+            return;
+
+        proposal.Author = updatedProposal.Author;
+        proposal.Department = updatedProposal.Department;
+        proposal.DateCreation = updatedProposal.DateCreation;
+        // Добавь другие поля, если нужно
+
+        await context.SaveChangesAsync();
     }
 
     // Delete
     public async Task Delete(int id)
     {
-        using (var context = CreateDbContext())
-        {
-            if (id >= 1) { 
-            var proposal = await context.Proposals.FindAsync(id);
-                try
-                {
-                    context.Proposals.Remove(proposal);
-                    await context.SaveChangesAsync();
-                    await ReorderNumbers();
-                }catch{ return; }
-            }
-          }
-            
-           
-           
+        if (id < 1) return;
+
+        await using var context = await CreateDbContextAsync();
+        var proposal = await context.Proposals.FindAsync(id);
         
+        if (proposal != null)
+        {
+            context.Proposals.Remove(proposal);
+            await context.SaveChangesAsync();
+            await ReorderNumbers();
+        }
     }
 
     // Метод для перезаписи номеров в базе данных
     public async Task ReorderNumbers()
     {
-        using (var context = CreateDbContext())
-        {
-            var proposals = await context.Proposals
-                                         .OrderBy(p => p.DateCreation) // Сортируем по дате создания или другому полю
-                                         .ToListAsync();
+        await using var context = await CreateDbContextAsync();
+        var proposals = await context.Proposals.OrderBy(p => p.DateCreation).ToListAsync();
 
         int counter = 1;
         foreach (var proposal in proposals)
         {
-            proposal.Number = counter;
-            counter++;
+            proposal.Number = counter++;
         }
 
-        // Сохраняем изменения
         await context.SaveChangesAsync();
-        }
     }
 }
-
 
 public interface IMyService
 {
     Task Create(Proposal newProposal);
     Task<List<Proposal>> GetAllProposals();
-    //Task<Proposal> GetProposalByIdAsync(int id);
     Task Update(Proposal updatedProposal);
     Task Delete(int id);
 }
+
 

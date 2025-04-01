@@ -9,8 +9,6 @@ using Blazorise.Icons.FontAwesome;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
@@ -23,30 +21,33 @@ builder.Services
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-var DBContextConnectionString = builder.Configuration.GetConnectionString(nameof(PurchaseContext));
-builder.Services.AddDbContext<PurchaseContext>(options => options.UseNpgsql(DBContextConnectionString));
+var DBConnectionString = builder.Configuration.GetConnectionString("PurchaseContext");
+
+builder.Services.AddDbContextFactory<PurchaseContext>(options =>
+    options.UseNpgsql(DBConnectionString, option => option.CommandTimeout(60))
+           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution));
 
 builder.Services.AddScoped<IMyService, PurchaseService>();
 
 var app = builder.Build();
 
-using var serviceScore = app.Services.CreateScope();
-var DBContext = serviceScore.ServiceProvider.GetRequiredService<PurchaseContext>();
-DBContext?.Database.Migrate();
+using var serviceScope = app.Services.CreateScope();
+var factory = serviceScope.ServiceProvider.GetRequiredService<IDbContextFactory<PurchaseContext>>();
 
+// Создаем контекст через фабрику
+await using var DBContext = await factory.CreateDbContextAsync();
+
+await DBContext.Database.MigrateAsync();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
-
 app.UseRouting();
 
 app.MapBlazorHub();

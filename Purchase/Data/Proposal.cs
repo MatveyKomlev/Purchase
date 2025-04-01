@@ -29,28 +29,28 @@ namespace Purchase.Data
         /// <summary>
         /// Категория покупки
         /// </summary>
-        public string ?Category { get; set; }
+        public string? Category { get; set; }
 
         [Required]
         [MaxLength(30)]
         /// <summary>
         /// Автор
         /// </summary>
-        public string ?Author { get; set; }
+        public string? Author { get; set; }
 
         [Required]
         [MaxLength(20)]
         /// <summary>
         /// Отдел
         /// </summary>
-        public string ?Department { get; set; }
+        public string? Department { get; set; }
 
         [Required]
         [MaxLength(10)]
         /// <summary>
         /// Статус заказа
         /// </summary>
-        public string ?Status { get; set; }
+        public string? Status { get; set; }
     }
 
 
