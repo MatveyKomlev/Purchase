@@ -24,10 +24,11 @@ public class PurchaseService : IMyService
     // Create
     public async Task Create(Proposal newProposal)
     {
-        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department))
+        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department)
+            || string.IsNullOrWhiteSpace(newProposal.Category) || string.IsNullOrWhiteSpace(newProposal.Status))
             return;
 
-        await using var context = await CreateDbContextAsync();
+        await using var context = await _purchaseFactory.CreateDbContextAsync();
         await context.Proposals.AddAsync(newProposal);
         await context.SaveChangesAsync();
     }
@@ -44,16 +45,16 @@ public class PurchaseService : IMyService
     {
         await using var context = await CreateDbContextAsync();
         var proposal = await context.Proposals.AsTracking().FirstOrDefaultAsync(x => x.ID == updatedProposal.ID);
-        
+
         if (proposal == null)
             return;
 
         proposal.Author = updatedProposal.Author;
+        proposal.Category = updatedProposal.Category;
         proposal.Department = updatedProposal.Department;
-        proposal.DateCreation = updatedProposal.DateCreation;
-        // Добавь другие поля, если нужно
+        proposal.Status = updatedProposal.Status;
 
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(); 
     }
 
     // Delete
