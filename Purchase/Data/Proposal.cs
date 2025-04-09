@@ -29,82 +29,31 @@ namespace Purchase.Data
         /// <summary>
         /// Категория покупки
         /// </summary>
-        public string ?Category { get; set; }
+        public string? Category { get; set; }
 
         [Required]
         [MaxLength(30)]
         /// <summary>
         /// Автор
         /// </summary>
-        public string ?Author { get; set; }
+        public string? Author { get; set; }
 
         [Required]
         [MaxLength(20)]
         /// <summary>
         /// Отдел
         /// </summary>
-        public string ?Department { get; set; }
+        public string? Department { get; set; }
 
         [Required]
         [MaxLength(10)]
         /// <summary>
         /// Статус заказа
         /// </summary>
-        public string ?Status { get; set; }
+        public string? Status { get; set; }
     }
 
 
 }
 
-
-public enum StatusText : long
-{
-    [Description("В процессе")]
-    InProgress,
-
-    [Description("Отклонен")]
-    Canceled,
-
-    [Description("Одобрен")]
-    Completed 
-
-
-}
-
-// Enum для отделов
-public enum Department : long
-{
-    [Description("Отдел A")]
-    Department_A,
-    [Description("Отдел B")]
-    Department_B,
-    [Description("Отдел C")]
-    Department_C
-}
-
-// Enum для категорий товара
-public enum Category : long
-{
-    [Description("Резисторы")]
-    Category_1,
-    [Description("Конденсаторы")]
-    Category_2,
-    [Description("Транзисторы")]
-    Category_3,
-    [Description("Микросхемы")]
-    Category_4,
-    [Description("Катушки индуктивности")]
-    Category_5
-}
-
-// Расширение для статуса
-public static class StatementsExtensions
-{
-    public static string GetDescription(this Enum value)
-    {
-        var field = value.GetType().GetField(value.ToString());
-        var attribute = field?.GetCustomAttribute<DescriptionAttribute>();
-        return attribute?.Description ?? value.ToString();
-    }
-}
 

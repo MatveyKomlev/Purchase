@@ -3,137 +3,163 @@
 @using Purchase.Services
 @using Blazorise.DataGrid
 @inject IMyService PurchaseService
-@using System.ComponentModel;
+@using System.ComponentModel
+@using Blazorise
 
+<PageTitle>Applications</PageTitle>
 
-<PageTitle>Counter</PageTitle>
+<h1>Заявки</h1>
 
-<h1>Counter</h1>
+<Bar Breakpoint="Breakpoint.Desktop"
+     Background="Background.Light"
+     ThemeContrast="ThemeContrast.Light">
+    <BarBrand>Управление заявками</BarBrand>
+    <BarMenu>
+        <BarEnd>
+            <BarItem>
+                <Button Color="Color.Primary" Clicked="ShowCreateModal">Создать</Button>
+            </BarItem>
+        </BarEnd>
+    </BarMenu>
+</Bar>
 
-<!-- Кнопки для операций с заявками -->
-<Button Color="Color.Primary" @onclick="Create">Создать</Button>
-<Button Color="Color.Primary" @onclick="Delete">Удалить</Button>
-<Button Color="Color.Primary" @onclick="Update">Обновить</Button>
+<DataGrid TItem="Proposal"
+          Data="proposals"
+          @ref="dataGrid"
+          Editable="false"
+          ShowPager="true"
+          PageSize="10">
+    <DataGridColumns>
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="ID" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер заявки" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Category)" Caption="Категория" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" />
 
-<!-- Поля для ввода данных -->
-<div>
-    <label>Категория:</label>
-    <select @bind="selectedCategory">
-        @foreach (var category in Enum.GetValues<Category>())
-        {
-            <option value="@category">@category.GetDescription()</option>
-        }
-    </select>
+        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+            <DisplayTemplate>
+                @{
+                    var proposal = context as Proposal;
+                    var approved = proposal?.Status == ErpStatus.Approved.ToString();
+                }
 
-    <label>Автор:</label>
-    <input type="text" class="textbox" placeholder="Введите полное имя" @bind="@author" />
+                <Button Color="Color.Warning"
+                        Size="Size.Small"
+                        Hidden="@approved"
+                        Clicked="@(() => ShowEditModal((Proposal)context))">
+                    Изменить
+                </Button>
+            </DisplayTemplate>
+        </DataGridColumn>
 
-    <label>Отдел:</label>
-    <select @bind="selectedDepartment">
-        @foreach (var department in Enum.GetValues<Department>())
-        {
-            <option value="@department">@department.GetDescription()</option>
-        }
-    </select>
+        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+            <DisplayTemplate>
+                @{
+                    var proposal = context as Proposal;
+                    var approved = proposal?.Status == ErpStatus.Approved.ToString();
+                }
 
-    <label>Статус:</label>
-    <select @bind="statusText">
-        @foreach (var statusText in Enum.GetValues<StatusText>())
-        {
-            <option value="@statusText">@statusText.GetDescription()</option>
-        }
-    </select>
+                <Button Color="Color.Danger"
+                        Size="Size.Small"
+                        Hidden="@approved"
+                        Clicked="@(() => DeleteProposal(((Proposal)context).ID))">
+                    Удалить
+                </Button>
+            </DisplayTemplate>
+        </DataGridColumn>
+    </DataGridColumns>
+</DataGrid>
 
-    <label>Удаление:</label>
-    <input type="text" class="textbox" placeholder=" Введите id для удаления" @bind="@del" />
-</div>
-
-<!-- Поле для поиска -->
-<input type="text" class="textbox" placeholder="Поиск" @bind="@searchText" />
-
-@if (proposals == null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <DataGrid TItem="Proposal" Data="@proposals" ShowPager="true" PageSize="5" Striped="true" Bordered="true">
-        <DataGridColumns>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="ID" Sortable="true" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер">
-                <DisplayTemplate>
-                    @context.Number
-                </DisplayTemplate>
-            </DataGridColumn>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" Sortable="true">
-                <DisplayTemplate>
-                    @context.DateCreation.ToString("dd.MM.yyyy")
-                </DisplayTemplate>
-            </DataGridColumn>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Category)" Caption="Категория" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" />
-        </DataGridColumns>
-    </DataGrid>
-}
+<Modal @bind-Visible="isModalVisible">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>@(isEdit ? "Редактировать заявку" : "Создать заявку")</ModalTitle>
+            <Button CloseButton Clicked="() => isModalVisible = false" />
+        </ModalHeader>
+        <ModalBody>
+            <Validations @ref="validations">
+                <TextEdit @bind-Text="proposalModel.Author" Placeholder="Автор" />
+                <TextEdit @bind-Text="proposalModel.Department" Placeholder="Отдел" />
+                <TextEdit @bind-Text="proposalModel.Category" Placeholder="Категория" />
+                <Select TValue="string" @bind-SelectedValue="proposalModel.Status">
+                    @foreach (var status in Enum.GetValues<ErpStatus>())
+                    {
+                        <SelectItem Value="@status.ToString()">@status.GetName()</SelectItem>
+                    }
+                </Select>
+            </Validations>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Primary" Clicked="SaveProposal">Сохранить</Button>
+            <Button Color="Color.Secondary" Clicked="() => isModalVisible = false">Отмена</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
 
 @code {
-    private string searchText = string.Empty;
-    private List<Proposal> proposals;
-
-    // Переменные для хранения значений, введенных пользователем
-    private string category;
-    private string author;
-    private string department;
-    private StatusText statusText = StatusText.InProgress; // Начальное значение для статуса
-    private Department selectedDepartment = Department.Department_A;
-    private Category selectedCategory = Category.Category_1;
-    private string del;
+    private List<Proposal> proposals = new();
+    private Proposal proposalModel = new();
+    private bool isModalVisible = false;
+    private bool isEdit = false;
+    private Validations? validations;
+    private DataGrid<Proposal>? dataGrid;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadProposals();
     }
 
-    private async Task LoadData()
+    private async Task LoadProposals()
     {
         proposals = await PurchaseService.GetAllProposals();
     }
 
-    private async void Create()
+    private void ShowCreateModal()
     {
-        var newProposal = new Proposal
-            {
-                Author = author,
-                Category = selectedCategory.GetDescription(),
-                Department = selectedDepartment.GetDescription(),
-                Status = statusText.GetDescription(),  // Преобразуем статус в строку для сохранения
-                Number = proposals.Count == 0 ? 1 : proposals.Max(p => p.Number) + 1, // тут пока логика инкремента как в бд (опционально - переделать потом)
-                DateCreation = DateTime.Now
-            };
-
-        if (newProposal.Author == null) { return; } // проверка на пустое поле автора записи
-
-        await PurchaseService.Create(newProposal);
-        author = string.Empty; // Очистить поля после сохранения
-        await LoadData();
+        proposalModel = new Proposal
+        {
+            DateCreation = DateTime.Now,
+                Status = ErpStatus.InProgress.ToString()
+        };
+        isEdit = false;
+        isModalVisible = true;
     }
 
-    private async void Delete()
+    private void ShowEditModal(Proposal proposal)
     {
-        if (del == null || del == "") { return; }
-        await PurchaseService.Delete(Convert.ToInt32(del));
-        await LoadData();
-        del = string.Empty;
+        proposalModel = new Proposal
+        {
+            ID = proposal.ID,
+            Author = proposal.Author,
+            Category = proposal.Category,
+            Department = proposal.Department,
+            DateCreation = proposal.DateCreation,
+            Status = proposal.Status,
+            Number = proposal.Number
+        };
+        isEdit = true;
+        isModalVisible = true;
     }
 
-    private async void Update()
+    private async Task SaveProposal()
     {
-        await LoadData();
-    }
-     
+        if (await validations!.ValidateAll())
+        {
+            if (isEdit)
+                await PurchaseService.Update(proposalModel);
+            else
+                await PurchaseService.Create(proposalModel);
 
+            isModalVisible = false;
+            await LoadProposals();
+        }
+    }
+
+    private async Task DeleteProposal(int id)
+    {
+        await PurchaseService.Delete(id);
+        await LoadProposals();
+    }
 }
-
-
