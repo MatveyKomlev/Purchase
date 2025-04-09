@@ -51,6 +51,9 @@ namespace Purchase.Data
         /// Статус заказа
         /// </summary>
         public string? Status { get; set; }
+
+        long ProposalCategoryID { get; set; }
+        ProposalCategory? ProposalCategory { get; set; }
     }
 
 
