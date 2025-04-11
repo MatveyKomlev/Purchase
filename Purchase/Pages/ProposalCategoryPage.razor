@@ -1,60 +1,73 @@
-﻿@* @page "/categories"
+﻿@page "/proposal-category"
+@inject IProposalCategoryService ProposalCategoryService
+
+@using Blazorise
 @using Purchase.Data
+@using Purchase.Services
 
-<h3>Категории заявок</h3>
+<PageTitle>Proposal Categories</PageTitle>
 
-<EditForm Model="@newCategory" OnValidSubmit="AddCategory">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+<h3>Категории предложений</h3>
 
-    <div class="form-group">
-        <label>Название</label>
-        <InputText @bind-Value="newCategory.Title" class="form-control" />
-    </div>
-    <div class="form-group">
-        <label>Материал</label>
-        <InputText @bind-Value="newCategory.Material" class="form-control" />
-    </div>
-    <div class="form-group">
-        <label>Статус</label>
-        <InputText @bind-Value="newCategory.Status" class="form-control" />
-    </div>
-    <button class="btn btn-primary" type="submit">Добавить</button>
-</EditForm>
+<DataGrid TItem="ProposalCategory" Data="@categories" Bordered="true" Striped="true" Hoverable="true">
+    <DataGridColumns>
+        <DataGridColumn TItem="ProposalCategory" Field="@nameof(ProposalCategory.Title)" Caption="Название" />
+        <DataGridColumn TItem="ProposalCategory" Field="@nameof(ProposalCategory.Material)" Caption="Материал" />
+        <DataGridColumn TItem="ProposalCategory" Field="@nameof(ProposalCategory.Status)" Caption="Статус" />
 
-<hr />
+        <DataGridColumn TItem="ProposalCategory" TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+            <DisplayTemplate>
+                @{
+                    var approved = (context.Status == "Approved");
+                }
+                <Button Color="Color.Danger" Size="Size.Small" Hidden="@approved"
+                        @onclick="() => ShowDeleteExclaimer(context)">
+                    Удалить
+                </Button>
+            </DisplayTemplate>
+        </DataGridColumn>
+    </DataGridColumns>
+</DataGrid>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Название</th>
-            <th>Материал</th>
-            <th>Статус</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var category in Categories)
-        {
-            <tr>
-                <td>@category.ID</td>
-                <td>@category.Title</td>
-                <td>@category.Material</td>
-                <td>@category.Status</td>
-            </tr>
-        }
-    </tbody>
-</table>
+<Modal @ref="deleteModal" Title="Удалить категорию">
+    <ModalBody>
+        Вы уверены, что хотите удалить категорию "@selectedCategory?.Title"?
+    </ModalBody>
+    <ModalFooter>
+        <Button Color="Color.Secondary" @onclick="CloseDeleteModal">Отмена</Button>
+        <Button Color="Color.Danger" @onclick="DeleteCategory">Удалить</Button>
+    </ModalFooter>
+</Modal>
 
 @code {
-    private List<ProposalCategory> Categories = new();
-    private ProposalCategory newCategory = new();
-    private int nextId => (Categories.LastOrDefault()?.ID ?? 0) + 1;
+    private List<ProposalCategory> categories;
+    private ProposalCategory selectedCategory;
 
-    private void AddCategory()
+    private Modal deleteModal;
+
+    protected override async Task OnInitializedAsync()
     {
-        newCategory.ID = nextId;
-        Categories.Add(newCategory);
-        newCategory = new();
+        categories = await ProposalCategoryService.GetAllCategories();
     }
-} *@
+
+    private void ShowDeleteExclaimer(ProposalCategory category)
+    {
+        selectedCategory = category;
+        deleteModal.Show();
+    }
+
+    private void CloseDeleteModal()
+    {
+        deleteModal.Hide();
+    }
+
+    private async Task DeleteCategory()
+    {
+        if (selectedCategory != null)
+        {
+            await ProposalCategoryService.DeleteCategory(selectedCategory.ID);
+            categories = await ProposalCategoryService.GetAllCategories(); // Обновляем список категорий
+            CloseDeleteModal();
+        }
+    }
+}

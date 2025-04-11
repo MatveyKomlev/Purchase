@@ -28,6 +28,8 @@ builder.Services.AddDbContextFactory<PurchaseContext>(options =>
            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution));
 
 builder.Services.AddScoped<IMyService, PurchaseService>();
+builder.Services.AddScoped<IProposalCategoryService, ProposalCategoryService>();
+
 
 var app = builder.Build();
 
