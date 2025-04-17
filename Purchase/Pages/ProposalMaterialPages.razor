@@ -25,7 +25,6 @@ else
             <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" Sortable="true">
                 <DisplayTemplate>@context.DateCreation.ToString("dd.MM.yyyy")</DisplayTemplate>
             </DataGridColumn>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Category)" Caption="Категория" />
             <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
             <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
             <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" />

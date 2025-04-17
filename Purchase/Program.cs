@@ -12,7 +12,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
 
 builder.Services
     .AddBlazorise(options => { options.Immediate = true; })
@@ -28,7 +27,7 @@ builder.Services.AddDbContextFactory<PurchaseContext>(options =>
            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution));
 
 builder.Services.AddScoped<IMyService, PurchaseService>();
-builder.Services.AddScoped<IProposalCategoryService, ProposalCategoryService>();
+builder.Services.AddScoped<IProposalCatalogService, ProposalCatalogService>();
 
 
 var app = builder.Build();

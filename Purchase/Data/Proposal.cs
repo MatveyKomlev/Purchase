@@ -24,12 +24,12 @@ namespace Purchase.Data
         /// </summary>
         public DateTime DateCreation { get; set; }
 
-        [Required]
-        [MaxLength(20)]
-        /// <summary>
-        /// Категория покупки
-        /// </summary>
-        public string? Category { get; set; }
+        //[Required]
+        //[MaxLength(20)]
+        ///// <summary>
+        ///// Категория покупки
+        ///// </summary>
+        //public string? Category { get; set; }
 
         [Required]
         [MaxLength(30)]
@@ -52,8 +52,8 @@ namespace Purchase.Data
         /// </summary>
         public string? Status { get; set; }
 
-        long ProposalCategoryID { get; set; }
-        ProposalCategory? ProposalCategory { get; set; }
+        public List<ProposalMaterial>? Materials { get; set; }
+        public List<ProposalCatalog>? Categories { get; set; }
     }
 
 

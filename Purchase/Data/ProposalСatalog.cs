@@ -3,16 +3,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Purchase.Data
 {
-    public class ProposalCategory
+    public class ProposalCatalog
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Display(Name = "#")]
         public int ID { get; set; }
-        public string? Status { get; set; }
-        public string? Title { get; set; }
+        [Required]
         public string? Material { get; set; }
-        public int ProposalId { get; set; } // Связь с Proposal
-        public Proposal? Proposal { get; set; }
+        [Required]
+        public string? Category { get; set; }
+
+        
     }
 }
+//public int ProposalId { get; set; } 
+//public Proposal? Proposal { get; set; }
