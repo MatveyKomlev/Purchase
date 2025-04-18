@@ -1,0 +1,154 @@
+﻿@page "/proposal-catalog"
+@using Purchase.Data
+@using Purchase.Services
+@inject IProposalCatalogService CatalogService
+@using Blazorise.DataGrid
+@using Blazorise
+
+<PageTitle>Справочник материалов</PageTitle>
+
+<h1>Справочник материалов</h1>
+
+<Bar Breakpoint="Breakpoint.Desktop" Background="Background.Light" ThemeContrast="ThemeContrast.Light">
+    <BarBrand>Управление справочником</BarBrand>
+    <BarMenu>
+        <BarEnd>
+            <BarItem>
+                <Button Color="Color.Primary" Clicked="ShowCreateModal">Создать</Button>
+            </BarItem>
+        </BarEnd>
+    </BarMenu>
+</Bar>
+
+<DataGrid TItem="ProposalCatalog"
+          Data="catalogItems"
+          @ref="dataGrid"
+          Editable="false"
+          ShowPager="true"
+          PageSize="10">
+    <DataGridColumns>
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.ID)" Caption="ID" />
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Material)" Caption="Материал" />
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Category)" Caption="Категория" />
+
+        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+            <DisplayTemplate>
+                <Button Color="Color.Warning" Size="Size.Small" Clicked="@(() => ShowEditModal((ProposalCatalog)context))">
+                    Изменить
+                </Button>
+            </DisplayTemplate>
+        </DataGridColumn>
+
+        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+            <DisplayTemplate>
+                <Button Color="Color.Danger" Size="Size.Small" Clicked="@(() => DeleteItem(((ProposalCatalog)context).ID))">
+                    Удалить
+                </Button>
+            </DisplayTemplate>
+        </DataGridColumn>
+    </DataGridColumns>
+</DataGrid>
+
+<Modal @bind-Visible="isModalVisible">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>@(isEdit ? "Редактировать запись" : "Создать запись")</ModalTitle>
+            <Button CloseButton Clicked="() => isModalVisible = false" />
+        </ModalHeader>
+        <ModalBody>
+            <Validations @ref="validations">
+                <Field>
+                    <Label>Материал</Label>
+                    <TextEdit @bind-Text="catalogModel.Material" />
+                </Field>
+
+                <Field>
+                    <Label>Категория</Label>
+                    <TextEdit @bind-Text="catalogModel.Category" />
+                </Field>
+            </Validations>
+
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Primary" Clicked="SaveItem">Сохранить</Button>
+            <Button Color="Color.Secondary" Clicked="() => isModalVisible = false">Отмена</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
+
+
+@code {
+    private List<ProposalCatalog> catalogItems = new();
+    private ProposalCatalog catalogModel = new();
+    private bool isModalVisible = false;
+    private bool isEdit = false;
+    private Validations? validations;
+    private DataGrid<ProposalCatalog>? dataGrid;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalog();
+    }
+
+    private async Task LoadCatalog()
+    {
+        catalogItems = await CatalogService.GetAll();
+    }
+
+    private void ShowCreateModal()
+    {
+        catalogModel = new ProposalCatalog();
+        isEdit = false;
+        isModalVisible = true;
+    }
+
+    private void ShowEditModal(ProposalCatalog item)
+    {
+        catalogModel = new ProposalCatalog
+            {
+                ID = item.ID,
+                Material = item.Material,
+                Category = item.Category
+            };
+        isEdit = true;
+        isModalVisible = true;
+    }
+
+    private async Task SaveItem()
+    {
+        if (await validations!.ValidateAll())
+        {
+            if (isEdit)
+            {
+                await CatalogService.Update(catalogModel);
+
+                
+                var item = catalogItems.FirstOrDefault(x => x.ID == catalogModel.ID);
+                if (item != null)
+                {
+                    item.Material = catalogModel.Material;
+                    item.Category = catalogModel.Category;
+                }
+            }
+            else
+            {
+                await CatalogService.Create(catalogModel);
+                await LoadCatalog(); 
+            }
+
+            isModalVisible = false;
+
+            if (!isEdit)
+                await LoadCatalog(); 
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        await CatalogService.Delete(id);
+        await LoadCatalog();
+    }
+}
+
