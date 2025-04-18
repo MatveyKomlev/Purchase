@@ -1,47 +1,196 @@
 ﻿@page "/proposal-material"
+@page "/proposal-material/{ProposalId:int?}"
 @using Purchase.Data
 @using Purchase.Services
+@using Blazorise
 @using Blazorise.DataGrid
-@inject IMyService PurchaseService
+@inject IProposalMaterialService MaterialService
+@inject IProposalCatalogService CatalogService
+@inject NavigationManager Navigation
 
-<PageTitle>Proposals</PageTitle>
+<PageTitle>Позиции заявки</PageTitle>
 
-<h1>Proposals</h1>
+<h3>Позиции заявки №@ProposalId</h3>
 
-<Button Color="Color.Primary" @onclick="LoadData">Обновить</Button>
+<Button Color="Color.Primary" Clicked="ShowCreateModal">Добавить позицию</Button>
 
-@if (proposals.Count == 0)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <DataGrid TItem="Proposal" Data="@proposals" ShowPager="true" PageSize="5" Striped="true" Bordered="true">
-        <DataGridColumns>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="#" Sortable="true" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер">
-                <DisplayTemplate>@context.Number</DisplayTemplate>
-            </DataGridColumn>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" Sortable="true">
-                <DisplayTemplate>@context.DateCreation.ToString("dd.MM.yyyy")</DisplayTemplate>
-            </DataGridColumn>
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
-            <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" />
-        </DataGridColumns>
-    </DataGrid>
-}
+<DataGrid TItem="ProposalMaterial"
+          Data="materials"
+          Editable="false"
+          ShowPager="true"
+          PageSize="10">
+    <DataGridColumns>
+        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.NameMaterial)" Caption="Материал" />
+        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.CategoryMaterial)" Caption="Категория" />
+        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Code)" Caption="Код" />
+        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Quantity)" Caption="Количество" />
+        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Comment)" Caption="Комментарий" />
+
+        <DataGridColumn TItem="ProposalMaterial" TextAlignment="TextAlignment.Center">
+            <DisplayTemplate>
+                <Button Color="Color.Warning" Size="Size.Small" Clicked="@(() => ShowEditModal((ProposalMaterial)context))">Изменить</Button>
+            </DisplayTemplate>
+        </DataGridColumn>
+        <DataGridColumn TItem="ProposalMaterial" TextAlignment="TextAlignment.Center">
+            <DisplayTemplate>
+                <Button Color="Color.Danger" Size="Size.Small" Clicked="@(() => DeleteItem(((ProposalMaterial)context).ID))">Удалить</Button>
+            </DisplayTemplate>
+        </DataGridColumn>
+    </DataGridColumns>
+</DataGrid>
+
+<Modal @bind-Visible="isModalVisible">
+    <ModalContent>
+        <ModalHeader>
+            <ModalTitle>@(isEdit ? "Редактировать позицию" : "Добавить позицию")</ModalTitle>
+            <Button CloseButton Clicked="() => isModalVisible = false" />
+        </ModalHeader>
+        <ModalBody>
+            <Validations @ref="validations">
+                <Field>
+                    <Label>Материал</Label>
+                    <Select TValue="string" @bind-SelectedValue="materialModel.NameMaterial" Changed="OnMaterialChanged">
+                        @foreach (var item in catalogItems)
+                        {
+                            <SelectItem Value="@item.Material">@item.Material</SelectItem>
+                        }
+                    </Select>
+                </Field>
+
+                <Field>
+                    <Label>Категория</Label>
+                    <Select TValue="string" @bind-SelectedValue="materialModel.CategoryMaterial" Changed="OnCategoryChanged">
+                        @foreach (var item in catalogItems)
+                        {
+                            <SelectItem Value="@item.Category">@item.Category</SelectItem>
+                        }
+                    </Select>
+                </Field>
+
+                <Field>
+                    <Label>Код</Label>
+                    <TextEdit @bind-Text="materialModel.Code" MaxLength="10" />
+                </Field>
+
+                <Field>
+                    <Label>Количество</Label>
+                    <NumericEdit @bind-Value="materialModel.Quantity" Min="1" />
+                </Field>
+
+                <Field>
+                    <Label>Комментарий</Label>
+                    <TextEdit @bind-Text="materialModel.Comment" />
+                </Field>
+            </Validations>
+        </ModalBody>
+        <ModalFooter>
+            <Button Color="Color.Primary" Clicked="SaveItem">Сохранить</Button>
+            <Button Color="Color.Secondary" Clicked="() => isModalVisible = false">Отмена</Button>
+        </ModalFooter>
+    </ModalContent>
+</Modal>
 
 @code {
-    private List<Proposal> proposals = new();
+    [Parameter]
+    public int ProposalId { get; set; }
+
+    private List<ProposalMaterial> materials = new();
+    private List<ProposalCatalog> catalogItems = new();
+
+    private ProposalMaterial materialModel = new();
+    private bool isModalVisible = false;
+    private bool isEdit = false;
+    private Validations? validations;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadCatalog();
+        await LoadMaterials();
     }
 
-    private async Task LoadData()
+    private async Task LoadMaterials()
     {
-        proposals = await PurchaseService.GetAllProposals();
+        materials = await MaterialService.GetByProposalId(ProposalId);
+    }
+
+    private async Task LoadCatalog()
+    {
+        catalogItems = await CatalogService.GetAll();
+    }
+
+    private void ShowCreateModal()
+    {
+        materialModel = new ProposalMaterial
+            {
+                ProposalId = ProposalId
+            };
+        isEdit = false;
+        isModalVisible = true;
+    }
+
+    private void ShowEditModal(ProposalMaterial item)
+    {
+        materialModel = new ProposalMaterial
+            {
+                ID = item.ID,
+                NameMaterial = item.NameMaterial,
+                CategoryMaterial = item.CategoryMaterial,
+                Code = item.Code,
+                Quantity = item.Quantity,
+                Comment = item.Comment,
+                ProposalId = item.ProposalId
+            };
+        isEdit = true;
+        isModalVisible = true;
+    }
+
+    private async Task SaveItem()
+    {
+        // Проводим явную проверку валидации
+        if (await validations!.ValidateAll())
+        {
+            // Если валидация успешна, сохраняем изменения
+            if (isEdit)
+            {
+                // Обновляем существующую позицию
+                await MaterialService.Update(materialModel);
+            }
+            else
+            {
+                // Создаем новую позицию
+                await MaterialService.Create(materialModel);
+            }
+
+            // Закрываем модальное окно
+            isModalVisible = false;
+
+            // Загружаем материалы заново
+            await LoadMaterials();
+        }
+        else
+        {
+            // Если валидация не прошла, можно добавить логику для отображения ошибок
+            await LoadMaterials();
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        await MaterialService.Delete(id);
+        await LoadMaterials();
+    }
+
+    private void OnMaterialChanged(string? selectedMaterial)
+    {
+        var selected = catalogItems.FirstOrDefault(x => x.Material == selectedMaterial);
+        materialModel.CategoryMaterial = selected?.Category;
+    }
+
+    private void OnCategoryChanged(string? selectedCategory)
+    {
+        var selected = catalogItems.FirstOrDefault(x => x.Category == selectedCategory);
+        // Можно обновить дополнительные данные, если нужно
     }
 }
+

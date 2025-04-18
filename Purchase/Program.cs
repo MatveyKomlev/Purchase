@@ -28,7 +28,7 @@ builder.Services.AddDbContextFactory<PurchaseContext>(options =>
 
 builder.Services.AddScoped<IMyService, PurchaseService>();
 builder.Services.AddScoped<IProposalCatalogService, ProposalCatalogService>();
-
+builder.Services.AddScoped<IProposalMaterialService, ProposalMaterialService>();
 
 var app = builder.Build();
 
