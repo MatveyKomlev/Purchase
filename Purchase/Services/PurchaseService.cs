@@ -24,10 +24,8 @@ public class PurchaseService : IMyService
     // Create
     public async Task Create(Proposal newProposal)
     {
-        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department)
-            || string.IsNullOrWhiteSpace(newProposal.Status))
+        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department))
             return;
-        //|| string.IsNullOrWhiteSpace(newProposal.Category)
         await using var context = await _purchaseFactory.CreateDbContextAsync();
         await context.Proposals.AddAsync(newProposal);
         await context.SaveChangesAsync();
@@ -50,7 +48,6 @@ public class PurchaseService : IMyService
             return;
 
         proposal.Author = updatedProposal.Author;
-        //proposal.Category = updatedProposal.Category;
         proposal.Department = updatedProposal.Department;
         proposal.Status = updatedProposal.Status;
 

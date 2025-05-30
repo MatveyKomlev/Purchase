@@ -33,22 +33,26 @@
         <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="ID" />
         <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер заявки" />
         <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" />
-       @*   <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Category)" Caption="Категория" /> *@
         <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
         <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" />
+
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус">
+            <DisplayTemplate>
+                @context.Status.GetName()
+            </DisplayTemplate>
+        </DataGridColumn>
 
         <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
             <DisplayTemplate>
                 @{
-                    var proposal = context as Proposal;
-                    var approved = proposal?.Status == ErpStatus.Approved.ToString();
+                    var proposal = (Proposal)context;
+                    var approved = proposal.Status == ErpStatus.Approved;
                 }
 
                 <Button Color="Color.Warning"
                         Size="Size.Small"
                         Hidden="@approved"
-                        Clicked="@(() => ShowEditModal((Proposal)context))">
+                        Clicked="@(() => ShowEditModal(proposal))">
                     Изменить
                 </Button>
             </DisplayTemplate>
@@ -57,14 +61,14 @@
         <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
             <DisplayTemplate>
                 @{
-                    var proposal = context as Proposal;
-                    var approved = proposal?.Status == ErpStatus.Approved.ToString();
+                    var proposal = (Proposal)context;
+                    var approved = proposal.Status == ErpStatus.Approved;
                 }
 
                 <Button Color="Color.Danger"
                         Size="Size.Small"
                         Hidden="@approved"
-                        Clicked="@(() => DeleteProposal(((Proposal)context).ID))">
+                        Clicked="@(() => DeleteProposal(proposal.ID))">
                     Удалить
                 </Button>
             </DisplayTemplate>
@@ -82,11 +86,10 @@
             <Validations @ref="validations">
                 <TextEdit @bind-Text="proposalModel.Author" Placeholder="Автор" />
                 <TextEdit @bind-Text="proposalModel.Department" Placeholder="Отдел" />
-               @*  <TextEdit @bind-Text="proposalModel.Category" Placeholder="Категория" /> *@
-                <Select TValue="string" @bind-SelectedValue="proposalModel.Status">
+                <Select TValue="ErpStatus" @bind-SelectedValue="proposalModel.Status">
                     @foreach (var status in Enum.GetValues<ErpStatus>())
                     {
-                        <SelectItem Value="@status.ToString()">@status.GetName()</SelectItem>
+                        <SelectItem Value="@status">@status.GetName()</SelectItem>
                     }
                 </Select>
             </Validations>
@@ -119,10 +122,10 @@
     private void ShowCreateModal()
     {
         proposalModel = new Proposal
-        {
-            DateCreation = DateTime.Now,
-                Status = ErpStatus.InProgress.ToString()
-        };
+            {
+                DateCreation = DateTime.Now,
+                Status = ErpStatus.InProgress
+            };
         isEdit = false;
         isModalVisible = true;
     }
@@ -130,15 +133,14 @@
     private void ShowEditModal(Proposal proposal)
     {
         proposalModel = new Proposal
-        {
-            ID = proposal.ID,
-            Author = proposal.Author,
-            // Category = proposal.Category,
-            Department = proposal.Department,
-            DateCreation = proposal.DateCreation,
-            Status = proposal.Status,
-            Number = proposal.Number
-        };
+            {
+                ID = proposal.ID,
+                Author = proposal.Author,
+                Department = proposal.Department,
+                DateCreation = proposal.DateCreation,
+                Status = proposal.Status,
+                Number = proposal.Number
+            };
         isEdit = true;
         isModalVisible = true;
     }
