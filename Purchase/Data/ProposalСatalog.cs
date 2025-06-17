@@ -24,5 +24,3 @@ namespace Purchase.Data
 
     }
 }
-//public int ProposalId { get; set; } 
-//public Proposal? Proposal { get; set; }
