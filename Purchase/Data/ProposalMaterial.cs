@@ -10,7 +10,7 @@ namespace Purchase.Data
         [Display(Name = "#")]
         public int ID { get; set; }
         public string? NameMaterial { get; set; }
-        public string? CategoryMaterial { get; set; } // будет пока вводимым полем, после можно будет сделать чтобы определялось само в зависимости от материала
+        public string? CategoryMaterial { get; set; } 
 
         [MaxLength(10)]
         public string? Code { get; set; }
