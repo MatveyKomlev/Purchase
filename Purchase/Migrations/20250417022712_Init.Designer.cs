@@ -11,8 +11,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Purchase.Migrations
 {
     [DbContext(typeof(PurchaseContext))]
-    [Migration("20250409130130_AddProposalCategory")]
-    partial class AddProposalCategory
+    [Migration("20250417022712_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -37,11 +37,6 @@ namespace Purchase.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<DateTime>("DateCreation")
                         .HasColumnType("timestamp without time zone");
 
@@ -63,7 +58,7 @@ namespace Purchase.Migrations
                     b.ToTable("Proposals");
                 });
 
-            modelBuilder.Entity("Purchase.Data.ProposalCategory", b =>
+            modelBuilder.Entity("Purchase.Data.ProposalMaterial", b =>
                 {
                     b.Property<int>("ID")
                         .ValueGeneratedOnAdd()
@@ -71,34 +66,83 @@ namespace Purchase.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ID"));
 
+                    b.Property<string>("CategoryMaterial")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NameMaterial")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProposalId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("ProposalId");
+
+                    b.ToTable("ProposalMaterials");
+                });
+
+            modelBuilder.Entity("Purchase.Data.ProposalСatalog", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ID"));
+
+                    b.Property<string>("Category")
+                        .HasColumnType("text");
+
                     b.Property<string>("Material")
                         .HasColumnType("text");
 
                     b.Property<int>("ProposalId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("Status")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Title")
-                        .HasColumnType("text");
-
                     b.HasKey("ID");
 
                     b.HasIndex("ProposalId");
 
-                    b.ToTable("ProposalCategories");
+                    b.ToTable("ProposalCatalogs");
                 });
 
-            modelBuilder.Entity("Purchase.Data.ProposalCategory", b =>
+            modelBuilder.Entity("Purchase.Data.ProposalMaterial", b =>
                 {
                     b.HasOne("Purchase.Data.Proposal", "Proposal")
-                        .WithMany()
+                        .WithMany("Materials")
                         .HasForeignKey("ProposalId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Proposal");
+                });
+
+            modelBuilder.Entity("Purchase.Data.ProposalСatalog", b =>
+                {
+                    b.HasOne("Purchase.Data.Proposal", "Proposal")
+                        .WithMany("Categories")
+                        .HasForeignKey("ProposalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Proposal");
+                });
+
+            modelBuilder.Entity("Purchase.Data.Proposal", b =>
+                {
+                    b.Navigation("Categories");
+
+                    b.Navigation("Materials");
                 });
 #pragma warning restore 612, 618
         }

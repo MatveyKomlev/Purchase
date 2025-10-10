@@ -10,7 +10,10 @@ public class PurchaseContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.UseSerialColumns(); 
-        base.OnModelCreating(modelBuilder); 
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Proposal>()
+            .Property(p => p.Status)
+            .HasConversion<string>();
     }
 }
