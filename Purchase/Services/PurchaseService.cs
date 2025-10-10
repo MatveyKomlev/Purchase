@@ -24,11 +24,8 @@ public class PurchaseService : IMyService
     // Create
     public async Task Create(Proposal newProposal)
     {
-        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department)
-            || string.IsNullOrWhiteSpace(newProposal.Status))
+        if (string.IsNullOrWhiteSpace(newProposal.Author) || string.IsNullOrWhiteSpace(newProposal.Department))
             return;
-        
-
         await using var context = await _purchaseFactory.CreateDbContextAsync();
 
         await context.Proposals.AddAsync(newProposal);
