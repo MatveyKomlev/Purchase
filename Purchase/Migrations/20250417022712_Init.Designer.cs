@@ -48,7 +48,7 @@ namespace Purchase.Migrations
                     b.Property<int>("Number")
                         .HasColumnType("integer");
 
-                    b.Property<string>("StatusM")
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");

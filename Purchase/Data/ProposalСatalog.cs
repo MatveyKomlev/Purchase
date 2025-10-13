@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Purchase.Data
 {
-    public class ProposalCategory
+    public class ProposalCatalog
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -24,3 +24,5 @@ namespace Purchase.Data
 
     }
 }
+//public int ProposalId { get; set; } 
+//public Proposal? Proposal { get; set; }
