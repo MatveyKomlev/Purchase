@@ -29,11 +29,19 @@ namespace Purchase.Data
     [Required(ErrorMessage = "Статус обязателен")]
     public ErpStatus Status { get; set; }
 
-    // Добавляем навигационное свойство
+    public DateTime? Deadline { get; set; }
+    
+    [MaxLength(500)]
+    public string? Explanation { get; set; } //Пояснение закупки
+    
+    [Required]
+    public Priorities Priority { get; set; } = Priorities.Medium; 
+
+    public int PositionsCount => Materials?.Count ?? 0;
+
+    // Навигационные свойства
     public List<ProposalMaterial> Materials { get; set; } = new();
     }
-
-
 }
 
 
