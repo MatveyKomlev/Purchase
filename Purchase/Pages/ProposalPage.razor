@@ -2,13 +2,14 @@
 @using Purchase.Data
 @using Purchase.Services
 @using Blazorise.DataGrid
-@inject IMyService PurchaseService
-@using System.ComponentModel
 @using Blazorise
+@using Blazorise.Icons
+@using Microsoft.JSInterop
+@inject IProposalService PurchaseService
 
-<PageTitle>Applications</PageTitle>
+<PageTitle>Заявки на закупку</PageTitle>
 
-<h1>Заявки</h1>
+<h1>Заявки на закупку</h1>
 
 <Bar Breakpoint="Breakpoint.Desktop"
      Background="Background.Light"
@@ -17,7 +18,7 @@
     <BarMenu>
         <BarEnd>
             <BarItem>
-                <Button Color="Color.Primary" Clicked="ShowCreateModal">Создать</Button>
+                <Button Color="Color.Primary" Clicked="ShowCreateModal">Создать заявку</Button>
             </BarItem>
         </BarEnd>
     </BarMenu>
@@ -30,73 +31,166 @@
           ShowPager="true"
           PageSize="10">
     <DataGridColumns>
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="ID" />
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер заявки" />
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" />
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" />
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" />
-
-        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус">
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.ID)" Caption="ID" Sortable="true" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Number)" Caption="Номер заявки" Sortable="true" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.DateCreation)" Caption="Дата создания" Sortable="true" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Author)" Caption="Автор" Sortable="true" />
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Department)" Caption="Отдел" Sortable="true" />
+        
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Priority)" Caption="Приоритет" Sortable="true">
             <DisplayTemplate>
-                @context.Status.GetName()
+                <Badge Color="@GetPriorityColor(context.Priority)" Class="text-uppercase">
+                    @GetPriorityName(context.Priority)
+                </Badge>
             </DisplayTemplate>
         </DataGridColumn>
 
-        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Status)" Caption="Статус" Sortable="true">
             <DisplayTemplate>
-                @{
-                    var proposal = (Proposal)context;
-                    var approved = proposal.Status == ErpStatus.Approved;
-                }
-
-                <Button Color="Color.Warning"
-                        Size="Size.Small"
-                        Hidden="@approved"
-                        Clicked="@(() => ShowEditModal(proposal))">
-                    Изменить
-                </Button>
+                <Badge Color="@GetStatusColor(context.Status)" Class="text-uppercase">
+                    @context.Status.GetName()
+                </Badge>
             </DisplayTemplate>
         </DataGridColumn>
 
-        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.Deadline)" Caption="Срок поставки" Sortable="true">
+            <DisplayTemplate>
+                @if (context.Deadline.HasValue)
+                {
+                    @context.Deadline.Value.ToShortDateString()
+                    
+                    @if (context.Deadline.Value < DateTime.Now && context.Status != ErpStatus.Approved)
+                    {
+                        <Badge Color="Color.Danger" Class="ms-1">Просрочен</Badge>
+                    }
+                }
+                else
+                {
+                    <span class="text-muted">Не указан</span>
+                }
+            </DisplayTemplate>
+        </DataGridColumn>
+
+        <DataGridColumn TItem="Proposal" Field="@nameof(Proposal.PositionsCount)" Caption="Позиций" Sortable="true" TextAlignment="TextAlignment.Center">
+            <DisplayTemplate>
+                <Badge Color="Color.Info">
+                    @context.PositionsCount
+                </Badge>
+            </DisplayTemplate>
+        </DataGridColumn>
+
+                <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false" Caption="Действия">
             <DisplayTemplate>
                 @{
                     var proposal = (Proposal)context;
-                    var approved = proposal.Status == ErpStatus.Approved;
+                    var canEdit = proposal.Status != ErpStatus.Approved;
                 }
-
-                <Button Color="Color.Danger"
-                        Size="Size.Small"
-                        Hidden="@approved"
-                        Clicked="@(() => DeleteProposal(proposal.ID))">
-                    Удалить
-                </Button>
+                <ButtonGroup Size="Size.Small">
+                    <Button Color="Color.Success" 
+                            Size="Size.Small"
+                            Clicked="@(() => ViewProposalMaterials(proposal.ID))"
+                            Title="Материалы заявки">
+                        📦
+                    </Button>
+            
+                    <Button Color="Color.Info" 
+                            Size="Size.Small"
+                            Clicked="@(() => ViewProposal(proposal.ID))"
+                            Title="Просмотр">
+                        👁️
+                    </Button>
+            
+                    <Button Color="Color.Warning"
+                            Size="Size.Small"
+                            Hidden="@(!canEdit)"
+                            Clicked="@(() => ShowEditModal(proposal))"
+                            Title="Редактировать">
+                        ✏️
+                    </Button>
+            
+                    <Button Color="Color.Danger"
+                            Size="Size.Small"
+                            Hidden="@(!canEdit)"
+                            Clicked="@(() => DeleteProposal(proposal.ID))"
+                            Title="Удалить">
+                        🗑️
+                    </Button>
+                </ButtonGroup>
             </DisplayTemplate>
         </DataGridColumn>
     </DataGridColumns>
 </DataGrid>
 
-<Modal @bind-Visible="isModalVisible">
+<!-- Модальное окно создания/редактирования -->
+<Modal @bind-Visible="isModalVisible" Size="ModalSize.Large">
     <ModalContent>
         <ModalHeader>
             <ModalTitle>@(isEdit ? "Редактировать заявку" : "Создать заявку")</ModalTitle>
-            <Button CloseButton Clicked="() => isModalVisible = false" />
+            <Button CloseButton Clicked="CloseModal" />
         </ModalHeader>
         <ModalBody>
             <Validations @ref="validations">
-                <TextEdit @bind-Text="proposalModel.Author" Placeholder="Автор" />
-                <TextEdit @bind-Text="proposalModel.Department" Placeholder="Отдел" />
-                <Select TValue="ErpStatus" @bind-SelectedValue="proposalModel.Status">
-                    @foreach (var status in Enum.GetValues<ErpStatus>())
-                    {
-                        <SelectItem Value="@status">@status.GetName()</SelectItem>
-                    }
-                </Select>
+                <Field>
+                    <FieldLabel>Номер заявки *</FieldLabel>
+                    <TextEdit @bind-Text="proposalModel.Number" Placeholder="Введите номер заявки" />
+                    <ValidationError>Номер заявки обязателен</ValidationError>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Автор *</FieldLabel>
+                    <TextEdit @bind-Text="proposalModel.Author" Placeholder="Введите автора" />
+                    <ValidationError>Автор обязателен</ValidationError>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Отдел *</FieldLabel>
+                    <TextEdit @bind-Text="proposalModel.Department" Placeholder="Введите отдел" />
+                    <ValidationError>Отдел обязателен</ValidationError>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Приоритет *</FieldLabel>
+                    <Select TValue="Priorities" @bind-SelectedValue="proposalModel.Priority">
+                        <SelectItem Value="@Priorities.Low">@GetPriorityName(Priorities.Low)</SelectItem>
+                        <SelectItem Value="@Priorities.Medium">@GetPriorityName(Priorities.Medium)</SelectItem>
+                        <SelectItem Value="@Priorities.High">@GetPriorityName(Priorities.High)</SelectItem>
+                        <SelectItem Value="@Priorities.Critical">@GetPriorityName(Priorities.Critical)</SelectItem>
+                    </Select>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Статус *</FieldLabel>
+                    <Select TValue="ErpStatus" @bind-SelectedValue="proposalModel.Status">
+                        @foreach (var status in Enum.GetValues<ErpStatus>())
+                        {
+                            <SelectItem Value="@status">@status.GetName()</SelectItem>
+                        }
+                    </Select>
+                </Field>
+
+                <Field>
+                    <FieldLabel>Срок поставки</FieldLabel>
+                    <DateEdit @bind-Date="proposalModel.Deadline" />
+                </Field>
+
+                <Field>
+                    <FieldLabel>Обоснование закупки</FieldLabel>
+                    <TextEdit @bind-Text="proposalModel.Explanation" 
+                             Placeholder="Опишите для чего нужна эта закупка..." 
+                             Multiline="true" 
+                             Rows="3" />
+                </Field>
             </Validations>
         </ModalBody>
         <ModalFooter>
-            <Button Color="Color.Primary" Clicked="SaveProposal">Сохранить</Button>
-            <Button Color="Color.Secondary" Clicked="() => isModalVisible = false">Отмена</Button>
+            <Button Color="Color.Primary" Clicked="SaveProposal">
+                💾
+                @(isEdit ? "Обновить" : "Создать")
+            </Button>
+            <Button Color="Color.Secondary" Clicked="CloseModal">
+                ❌
+                Отмена
+            </Button>
         </ModalFooter>
     </ModalContent>
 </Modal>
@@ -109,6 +203,9 @@
     private Validations? validations;
     private DataGrid<Proposal>? dataGrid;
 
+    [Inject] private NavigationManager NavigationManager { get; set; } = null!;
+    [Inject] private IJSRuntime jsRuntime { get; set; } = null!;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadProposals();
@@ -117,15 +214,18 @@
     private async Task LoadProposals()
     {
         proposals = await PurchaseService.GetAllProposals();
+        StateHasChanged();
     }
 
     private void ShowCreateModal()
     {
         proposalModel = new Proposal
-            {
-                DateCreation = DateTime.Now,
-                Status = ErpStatus.InProgress
-            };
+        {
+            DateCreation = DateTime.Now,
+            Status = ErpStatus.InProgress,
+            Priority = Priorities.Medium,
+            Number = GenerateProposalNumber()
+        };
         isEdit = false;
         isModalVisible = true;
     }
@@ -133,16 +233,31 @@
     private void ShowEditModal(Proposal proposal)
     {
         proposalModel = new Proposal
-            {
-                ID = proposal.ID,
-                Author = proposal.Author,
-                Department = proposal.Department,
-                DateCreation = proposal.DateCreation,
-                Status = proposal.Status,
-                Number = proposal.Number
-            };
+        {
+            ID = proposal.ID,
+            Author = proposal.Author,
+            Department = proposal.Department,
+            DateCreation = proposal.DateCreation,
+            Status = proposal.Status,
+            Priority = proposal.Priority,
+            Number = proposal.Number,
+            Deadline = proposal.Deadline,
+            Explanation = proposal.Explanation
+        };
         isEdit = true;
         isModalVisible = true;
+    }
+
+    private void ViewProposal(int id)
+    {
+        // Переход на страницу просмотра заявки с материалами
+        NavigationManager.NavigateTo($"/proposal-view/{id}");
+    }
+
+    private void ViewProposalMaterials(int proposalId)
+    {
+        Console.WriteLine($"Navigating to materials for proposal: {proposalId}");
+        NavigationManager.NavigateTo($"/proposal-material/{proposalId}", forceLoad: true);
     }
 
     private async Task SaveProposal()
@@ -154,14 +269,65 @@
             else
                 await PurchaseService.Create(proposalModel);
 
-            isModalVisible = false;
+            CloseModal();
             await LoadProposals();
         }
     }
 
     private async Task DeleteProposal(int id)
     {
-        await PurchaseService.Delete(id);
-        await LoadProposals();
+        if (await jsRuntime.InvokeAsync<bool>("confirm", "Вы уверены, что хотите удалить эту заявку?"))
+        {
+            await PurchaseService.Delete(id);
+            await LoadProposals();
+        }
+    }
+
+    private void CloseModal()
+    {
+        isModalVisible = false;
+        validations?.ClearAll();
+    }
+
+    private string GenerateProposalNumber()
+    {
+        var year = DateTime.Now.Year;
+        var count = proposals.Count + 1;
+        return $"З-{year}-{count:D4}";
+    }
+
+    private Color GetStatusColor(ErpStatus status)
+    {
+        return status switch
+        {
+            ErpStatus.InProgress => Color.Warning,
+            ErpStatus.Approved => Color.Success,
+            ErpStatus.Rejected => Color.Danger,
+            _ => Color.Secondary
+        };
+    }
+
+    private Color GetPriorityColor(Priorities priority)
+    {
+        return priority switch
+        {
+            Priorities.Low => Color.Success,
+            Priorities.Medium => Color.Warning,
+            Priorities.High => Color.Danger,
+            Priorities.Critical => Color.Dark,
+            _ => Color.Secondary
+        };
+    }
+
+    private string GetPriorityName(Priorities priority)
+    {
+        return priority switch
+        {
+            Priorities.Low => "Низкий",
+            Priorities.Medium => "Средний", 
+            Priorities.High => "Высокий",
+            Priorities.Critical => "Критический",
+            _ => priority.ToString()
+        };
     }
 }

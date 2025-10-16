@@ -11,8 +11,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Purchase.Migrations
 {
     [DbContext(typeof(PurchaseContext))]
-    [Migration("20250417215140_RemoveProposalIdFromCatalog")]
-    partial class RemoveProposalIdFromCatalog
+    [Migration("20251013063452_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -22,7 +22,7 @@ namespace Purchase.Migrations
                 .HasAnnotation("ProductVersion", "7.0.20")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.UseSerialColumns(modelBuilder);
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Purchase.Data.Proposal", b =>
                 {
@@ -30,10 +30,9 @@ namespace Purchase.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ID"));
 
                     b.Property<string>("Author")
-                        .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
@@ -41,14 +40,14 @@ namespace Purchase.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Department")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
                     b.Property<int>("Number")
+                        .HasMaxLength(100)
                         .HasColumnType("integer");
 
-                    b.Property<string>("StatusM")
+                    b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
@@ -64,7 +63,7 @@ namespace Purchase.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ID"));
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -74,12 +73,13 @@ namespace Purchase.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("ProposalID")
+                    b.Property<int>("ProposalId")
                         .HasColumnType("integer");
 
-                    b.HasKey("ID");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric");
 
-                    b.HasIndex("ProposalID");
+                    b.HasKey("ID");
 
                     b.ToTable("ProposalCatalogs");
                 });
@@ -90,19 +90,23 @@ namespace Purchase.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseSerialColumn(b.Property<int>("ID"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ID"));
 
                     b.Property<string>("CategoryMaterial")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("Code")
+                        .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
                     b.Property<string>("Comment")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("NameMaterial")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<int>("ProposalId")
@@ -111,18 +115,15 @@ namespace Purchase.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("StatusM")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("ID");
 
                     b.HasIndex("ProposalId");
 
                     b.ToTable("ProposalMaterials");
-                });
-
-            modelBuilder.Entity("Purchase.Data.ProposalCatalog", b =>
-                {
-                    b.HasOne("Purchase.Data.Proposal", null)
-                        .WithMany("Categories")
-                        .HasForeignKey("ProposalID");
                 });
 
             modelBuilder.Entity("Purchase.Data.ProposalMaterial", b =>
@@ -138,8 +139,6 @@ namespace Purchase.Migrations
 
             modelBuilder.Entity("Purchase.Data.Proposal", b =>
                 {
-                    b.Navigation("Categories");
-
                     b.Navigation("Materials");
                 });
 #pragma warning restore 612, 618

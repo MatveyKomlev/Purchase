@@ -1,9 +1,11 @@
 ﻿@page "/proposal-catalog"
 @using Purchase.Data
 @using Purchase.Services
-@inject IProposalCatalogService CatalogService
 @using Blazorise.DataGrid
 @using Blazorise
+@using Microsoft.JSInterop
+@inject IProposalCatalogService CatalogService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Справочник материалов</PageTitle>
 
@@ -12,92 +14,317 @@
 <Bar Breakpoint="Breakpoint.Desktop" Background="Background.Light" ThemeContrast="ThemeContrast.Light">
     <BarBrand>Управление справочником</BarBrand>
     <BarMenu>
+        <BarStart>
+            <BarItem>
+                <Field>
+                    <FieldLabel>Поиск:</FieldLabel>
+                    <TextEdit @bind-Text="searchTerm" Placeholder="Поиск по названию или артикулу..." 
+                             Changed="OnSearchChanged" />
+                </Field>
+            </BarItem>
+        </BarStart>
         <BarEnd>
             <BarItem>
-                <Button Color="Color.Primary" Clicked="ShowCreateModal">Создать</Button>
+                <Button Color="Color.Primary" Clicked="ShowCreateModal">
+                    ➕ Добавить материал
+                </Button>
             </BarItem>
         </BarEnd>
     </BarMenu>
 </Bar>
 
+<!-- Статистика -->
+<Card Class="mb-3">
+    <CardBody>
+        <div class="row text-center">
+            <div class="col">
+                <h5 class="text-primary">@totalItems</h5>
+                <small class="text-muted">Всего материалов</small>
+            </div>
+            <div class="col">
+                <h5 class="text-success">@uniqueCategories</h5>
+                <small class="text-muted">Уникальных категорий</small>
+            </div>
+            <div class="col">
+                <h5 class="text-warning">@materialsWithManufacturer</h5>
+                <small class="text-muted">С указанием производителя</small>
+            </div>
+        </div>
+    </CardBody>
+</Card>
+
 <DataGrid TItem="ProposalCatalog"
-          Data="catalogItems"
+          Data="filteredCatalogItems"
           @ref="dataGrid"
           Editable="false"
           ShowPager="true"
           PageSize="10">
     <DataGridColumns>
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.ID)" Caption="ID" />
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Material)" Caption="Материал" />
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Category)" Caption="Категория" />
-
-        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.ID)" Caption="ID" Sortable="true" />
+        
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Material)" Caption="Материал" Sortable="true">
             <DisplayTemplate>
-                <Button Color="Color.Warning" Size="Size.Small" Clicked="@(() => ShowEditModal((ProposalCatalog)context))">
-                    Изменить
-                </Button>
+                <div>
+                    <strong>@context.Material</strong>
+                    @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
+                    {
+                        <br />
+                        <small class="text-muted">Артикул: @context.ManufacturerPartNumber</small>
+                    }
+                </div>
             </DisplayTemplate>
         </DataGridColumn>
 
-        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false">
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Category)" Caption="Категория" Sortable="true">
             <DisplayTemplate>
-                <Button Color="Color.Danger" Size="Size.Small" Clicked="@(() => DeleteItem(((ProposalCatalog)context).ID))">
-                    Удалить
-                </Button>
+                <Badge Color="Color.Info" Class="text-uppercase">
+                    @context.Category
+                </Badge>
+            </DisplayTemplate>
+        </DataGridColumn>
+
+        <DataGridColumn TItem="ProposalCatalog" Caption="Производитель" Sortable="true">
+            <DisplayTemplate>
+                @if (!string.IsNullOrEmpty(context.ManufacturerName))
+                {
+                    <div>
+                        <strong>@context.ManufacturerName</strong>
+                        @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
+                        {
+                            <br />
+                            <small class="text-muted">@context.ManufacturerPartNumber</small>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <span class="text-muted">Не указан</span>
+                }
+            </DisplayTemplate>
+        </DataGridColumn>
+
+        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.UnitOfMeasure)" Caption="Ед. изм." Sortable="true" TextAlignment="TextAlignment.Center">
+            <DisplayTemplate>
+                <Badge Color="Color.Secondary">
+                    @(string.IsNullOrEmpty(context.UnitOfMeasure) ? "—" : context.UnitOfMeasure)
+                </Badge>
+            </DisplayTemplate>
+        </DataGridColumn>
+
+        <DataGridColumn TItem="ProposalCatalog" Caption="Использование" Sortable="true" TextAlignment="TextAlignment.Center">
+            <DisplayTemplate>
+                @{
+                    var usageCount = context.ProposalMaterials?.Count ?? 0;
+                }
+                @if (usageCount > 0)
+                {
+                    <Tooltip Text="@($"Используется в {usageCount} заявках")">
+                        <Badge Color="Color.Success">
+                            @usageCount
+                        </Badge>
+                    </Tooltip>
+                }
+                else
+                {
+                    <Badge Color="Color.Light" Class="text-dark">0</Badge>
+                }
+            </DisplayTemplate>
+        </DataGridColumn>
+
+        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false" Caption="Действия">
+            <DisplayTemplate>
+                @{
+                    var catalogItem = (ProposalCatalog)context;
+                    var canDelete = catalogItem.ProposalMaterials?.Count == 0;
+                }
+                <ButtonGroup Size="Size.Small">
+                    <Button Color="Color.Info" 
+                            Size="Size.Small"
+                            Clicked="@(() => ViewCatalogItem(catalogItem))"
+                            Title="Просмотр">
+                        👁️
+                    </Button>
+                    
+                    <Button Color="Color.Warning"
+                            Size="Size.Small"
+                            Clicked="@(() => ShowEditModal(catalogItem))"
+                            Title="Редактировать">
+                        ✏️
+                    </Button>
+                    
+                    <Button Color="Color.Danger"
+                            Size="Size.Small"
+                            Hidden="@(!canDelete)"
+                            Clicked="@(() => DeleteItem(catalogItem.ID))"
+                            Title="Удалить">
+                        🗑️
+                    </Button>
+
+                    <Button Color="Color.Secondary"
+                            Size="Size.Small"
+                            Hidden="@canDelete"
+                            Title="Нельзя удалить - используется в заявках"
+                            Disabled="true">
+                        ⚠️
+                    </Button>
+                </ButtonGroup>
             </DisplayTemplate>
         </DataGridColumn>
     </DataGridColumns>
 </DataGrid>
 
-<Modal @bind-Visible="isModalVisible">
+<!-- Модальное окно создания/редактирования -->
+<Modal @bind-Visible="isModalVisible" Size="ModalSize.Large">
     <ModalContent>
         <ModalHeader>
-            <ModalTitle>@(isEdit ? "Редактировать запись" : "Создать запись")</ModalTitle>
-            <Button CloseButton Clicked="() => isModalVisible = false" />
+            <ModalTitle>@(isEdit ? "Редактировать материал" : "Добавить материал")</ModalTitle>
+            <Button CloseButton Clicked="CloseModal" />
         </ModalHeader>
         <ModalBody>
             <Validations @ref="validations">
-                <Field>
-                    <Label>Материал</Label>
-                    <TextEdit @bind-Text="catalogModel.Material" />
-                </Field>
+                <div class="row">
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Материал *</FieldLabel>
+                            <TextEdit @bind-Text="catalogModel.Material" Placeholder="Название материала" />
+                            <ValidationError>Название материала обязательно</ValidationError>
+                        </Field>
+                    </div>
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Категория *</FieldLabel>
+                            <TextEdit @bind-Text="catalogModel.Category" Placeholder="Категория материала" />
+                            <ValidationError>Категория обязательна</ValidationError>
+                        </Field>
+                    </div>
+                </div>
 
-                <Field>
-                    <Label>Категория</Label>
-                    <TextEdit @bind-Text="catalogModel.Category" />
-                </Field>
+                <div class="row">
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Производитель</FieldLabel>
+                            <TextEdit @bind-Text="catalogModel.ManufacturerName" Placeholder="Название производителя" />
+                        </Field>
+                    </div>
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Партномер</FieldLabel>
+                            <TextEdit @bind-Text="catalogModel.ManufacturerPartNumber" Placeholder="Партномер производителя" />
+                        </Field>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Единица измерения</FieldLabel>
+                            <InputSelect TValue="string" @bind-Value="catalogModel.UnitOfMeasure" class="form-control">
+                                <option value="">— Выберите —</option>
+                                <option value="шт">Штуки (шт)</option>
+                                <option value="кг">Килограммы (кг)</option>
+                                <option value="м">Метры (м)</option>
+                                <option value="л">Литры (л)</option>
+                                <option value="уп">Упаковки (уп)</option>
+                                <option value="компл">Комплекты (компл)</option>
+                            </InputSelect>
+                        </Field>
+                    </div>
+                    <div class="col-md-6">
+                        <Field>
+                            <FieldLabel>Использование в заявках</FieldLabel>
+                            <div class="form-control-plaintext">
+                                @if (isEdit && catalogModel.ProposalMaterials?.Count > 0)
+                                {
+                                    <Badge Color="Color.Info">
+                                        Используется в @catalogModel.ProposalMaterials.Count заявках
+                                    </Badge>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Не используется</span>
+                                }
+                            </div>
+                        </Field>
+                    </div>
+                </div>
             </Validations>
-
         </ModalBody>
         <ModalFooter>
-            <Button Color="Color.Primary" Clicked="SaveItem">Сохранить</Button>
-            <Button Color="Color.Secondary" Clicked="() => isModalVisible = false">Отмена</Button>
+            <Button Color="Color.Primary" Clicked="SaveItem">
+                💾 @(isEdit ? "Обновить" : "Создать")
+            </Button>
+            <Button Color="Color.Secondary" Clicked="CloseModal">
+                ❌ Отмена
+            </Button>
         </ModalFooter>
     </ModalContent>
 </Modal>
 
-
 @code {
     private List<ProposalCatalog> catalogItems = new();
+    private List<ProposalCatalog> filteredCatalogItems = new();
     private ProposalCatalog catalogModel = new();
+    private string searchTerm = "";
     private bool isModalVisible = false;
     private bool isEdit = false;
     private Validations? validations;
     private DataGrid<ProposalCatalog>? dataGrid;
 
+    // Статистика
+    private int totalItems = 0;
+    private int uniqueCategories = 0;
+    private int materialsWithManufacturer = 0;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadCatalog();
+        CalculateStatistics();
     }
 
     private async Task LoadCatalog()
     {
         catalogItems = await CatalogService.GetAll();
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredCatalogItems = catalogItems;
+        }
+        else
+        {
+            var term = searchTerm.ToLower();
+            filteredCatalogItems = catalogItems
+                .Where(c => c.Material.ToLower().Contains(term) ||
+                           c.Category.ToLower().Contains(term) ||
+                           (c.ManufacturerPartNumber ?? "").ToLower().Contains(term) ||
+                           (c.ManufacturerName ?? "").ToLower().Contains(term))
+                .ToList();
+        }
+        CalculateStatistics();
+    }
+
+    private void CalculateStatistics()
+    {
+        totalItems = filteredCatalogItems.Count;
+        uniqueCategories = filteredCatalogItems.Select(c => c.Category).Distinct().Count();
+        materialsWithManufacturer = filteredCatalogItems.Count(c => !string.IsNullOrEmpty(c.ManufacturerName));
+    }
+
+    private void OnSearchChanged(string? value)
+    {
+        ApplyFilter();
+        StateHasChanged();
     }
 
     private void ShowCreateModal()
     {
-        catalogModel = new ProposalCatalog();
+        catalogModel = new ProposalCatalog
+        {
+            UnitOfMeasure = "шт"
+        };
         isEdit = false;
         isModalVisible = true;
     }
@@ -105,11 +332,15 @@
     private void ShowEditModal(ProposalCatalog item)
     {
         catalogModel = new ProposalCatalog
-            {
-                ID = item.ID,
-                Material = item.Material,
-                Category = item.Category
-            };
+        {
+            ID = item.ID,
+            Material = item.Material,
+            Category = item.Category,
+            ManufacturerName = item.ManufacturerName,
+            ManufacturerPartNumber = item.ManufacturerPartNumber,
+            UnitOfMeasure = item.UnitOfMeasure,
+            ProposalMaterials = item.ProposalMaterials
+        };
         isEdit = true;
         isModalVisible = true;
     }
@@ -119,36 +350,41 @@
         if (await validations!.ValidateAll())
         {
             if (isEdit)
-            {
                 await CatalogService.Update(catalogModel);
-
-                
-                var item = catalogItems.FirstOrDefault(x => x.ID == catalogModel.ID);
-                if (item != null)
-                {
-                    item.Material = catalogModel.Material;
-                    item.Category = catalogModel.Category;
-                }
-            }
             else
-            {
                 await CatalogService.Create(catalogModel);
-                await LoadCatalog(); 
-            }
 
-            isModalVisible = false;
-
-            if (!isEdit)
-                await LoadCatalog(); 
-
-            StateHasChanged();
+            CloseModal();
+            await LoadCatalog();
         }
     }
 
     private async Task DeleteItem(int id)
     {
-        await CatalogService.Delete(id);
-        await LoadCatalog();
+        var item = catalogItems.FirstOrDefault(c => c.ID == id);
+        if (item != null && item.ProposalMaterials?.Count > 0)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Нельзя удалить материал, который используется в заявках!");
+            return;
+        }
+
+        if (await JSRuntime.InvokeAsync<bool>("confirm", "Вы уверены, что хотите удалить этот материал из каталога?"))
+        {
+            await CatalogService.Delete(id);
+            await LoadCatalog();
+        }
+    }
+
+    private void CloseModal()
+    {
+        isModalVisible = false;
+        validations?.ClearAll();
+    }
+
+    private void ViewCatalogItem(ProposalCatalog item)
+    {
+        // Можно открыть модальное окно с детальной информацией
+        // или перейти на отдельную страницу
+        ShowEditModal(item);
     }
 }
-

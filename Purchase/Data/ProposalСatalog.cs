@@ -16,13 +16,17 @@ namespace Purchase.Data
         [Required(ErrorMessage = "Категория обязательна")]
         public string? Category { get; set; }
 
-        [Range(0.01, double.MaxValue, ErrorMessage = "Количество должно быть больше 0")]
-        public decimal Quantity { get; set; }
+        [MaxLength(50)]
+        public string? ManufacturerPartNumber { get; set; }
 
-        public int ProposalId { get; set; }
+        [MaxLength(100)]
+        public string? ManufacturerName { get; set; }
 
+        [MaxLength(20)]
+        public string? UnitOfMeasure { get; set; }
+
+        // Навигационное свойство к материалам заявок
+        public List<ProposalMaterial> ProposalMaterials { get; set; } = new();
 
     }
 }
-//public int ProposalId { get; set; } 
-//public Proposal? Proposal { get; set; }
