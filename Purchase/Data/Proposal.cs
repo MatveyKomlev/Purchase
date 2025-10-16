@@ -14,7 +14,7 @@ namespace Purchase.Data
 
     [Required(ErrorMessage = "Номер обязателен")]
     [StringLength(100)]
-    public int Number { get; set; }
+    public string? Number { get; set; }
 
     [Required]
     public DateTime DateCreation { get; set; }

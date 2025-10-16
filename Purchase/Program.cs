@@ -26,7 +26,7 @@ builder.Services.AddDbContextFactory<PurchaseContext>(options =>
     options.UseNpgsql(DBConnectionString, option => option.CommandTimeout(60))
            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution));
 
-builder.Services.AddScoped<IMyService, PurchaseService>();
+builder.Services.AddScoped<IProposalService, ProposalService>();
 builder.Services.AddScoped<IProposalCatalogService, ProposalCatalogService>();
 builder.Services.AddScoped<IProposalMaterialService, ProposalMaterialService>();
 
