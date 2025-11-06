@@ -3,11 +3,11 @@ using Purchase.Data;
 
 namespace Purchase.Services;
 
-public class ProposalCatalogService : IProposalCatalogService
+public class CatalogService : IProposalCatalogService
 {
     private readonly IDbContextFactory<PurchaseContext> _contextFactory;
 
-    public ProposalCatalogService(IDbContextFactory<PurchaseContext> contextFactory)
+    public CatalogService(IDbContextFactory<PurchaseContext> contextFactory)
     {
         _contextFactory = contextFactory;
     }
@@ -29,6 +29,7 @@ public class ProposalCatalogService : IProposalCatalogService
     {
         await using var context = await CreateDbContextAsync();
         return await context.ProposalCatalogs
+            .AsTracking()
             .Include(pc => pc.ProposalMaterials)
             .FirstOrDefaultAsync(pc => pc.ID == id);
     }
@@ -46,18 +47,13 @@ public class ProposalCatalogService : IProposalCatalogService
     public async Task Update(ProposalCatalog updated)
     {
         await using var context = await CreateDbContextAsync();
-        var existing = await context.ProposalCatalogs.AsTracking()
+
+        var existing = await context.ProposalCatalogs
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.ID == updated.ID);
 
         if (existing == null)
             return;
-
-        // Обновляем все поля
-        existing.Material = updated.Material;
-        existing.Category = updated.Category;
-        existing.ManufacturerPartNumber = updated.ManufacturerPartNumber;
-        existing.ManufacturerName = updated.ManufacturerName;
-        existing.UnitOfMeasure = updated.UnitOfMeasure;
 
         await context.SaveChangesAsync();
     }

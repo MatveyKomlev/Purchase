@@ -85,6 +85,20 @@
                     var proposal = (Proposal)context;
                     var canEdit = proposal.Status != ErpStatus.Approved;
                 }
+                <div class="mt-3 p-3 bg-light">
+                    <h5>Отладка - существующие заявки:</h5>
+                    @foreach (var p in proposals.Take(5))
+                    {
+                        <div class="mb-1">
+                            <span>ID: @p.ID, Номер: @p.Number, Автор: @p.Author</span>
+                            <Button Color="Color.Success" Size="Size.Small"
+                                    Clicked="@(() => ViewProposalMaterials(p.ID))"
+                                    Class="ms-2">
+                                📦 Перейти (ID=@p.ID)
+                            </Button>
+                        </div>
+                    }
+                </div>
                 <ButtonGroup Size="Size.Small">
                     <Button Color="Color.Success" 
                             Size="Size.Small"
@@ -230,22 +244,14 @@
         isModalVisible = true;
     }
 
-    private void ShowEditModal(Proposal proposal)
+    private async void ShowEditModal(Proposal proposal)
     {
-        proposalModel = new Proposal
+        proposalModel = await PurchaseService.GetById(proposal.ID); 
+        if (proposalModel != null)
         {
-            ID = proposal.ID,
-            Author = proposal.Author,
-            Department = proposal.Department,
-            DateCreation = proposal.DateCreation,
-            Status = proposal.Status,
-            Priority = proposal.Priority,
-            Number = proposal.Number,
-            Deadline = proposal.Deadline,
-            Explanation = proposal.Explanation
-        };
-        isEdit = true;
-        isModalVisible = true;
+            isEdit = true;
+            isModalVisible = true;
+        }
     }
 
     private void ViewProposal(int id)
@@ -257,6 +263,7 @@
     private void ViewProposalMaterials(int proposalId)
     {
         Console.WriteLine($"Navigating to materials for proposal: {proposalId}");
+        Console.WriteLine($"URL will be: /proposal-material/{proposalId}");
         NavigationManager.NavigateTo($"/proposal-material/{proposalId}", forceLoad: true);
     }
 

@@ -13,20 +13,30 @@
 
 <PageTitle>Позиции заявки</PageTitle>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-        <h3>Позиции заявки №@proposal?.Number</h3>
-        <p class="text-muted mb-0">@proposal?.Author - @proposal?.Department</p>
-    </div>
-    <div>
-        <Button Color="Color.Secondary" Clicked="GoBack" Class="me-2">
-            ↩️ Назад к заявкам
-        </Button>
-        <Button Color="Color.Primary" Clicked="ShowCreateModal">
-            ➕ Добавить позицию
-        </Button>
-    </div>
-</div>
+<Bar Breakpoint="Breakpoint.Desktop" Background="Background.Light" ThemeContrast="ThemeContrast.Light">
+    <BarBrand>Позиции заявки №@proposal?.Number</BarBrand>
+    <BarMenu>
+        <BarStart>
+            <BarItem>
+                <Button Color="Color.Secondary" Clicked="GoBack">
+                    ↩️ Назад к заявкам
+                </Button>
+            </BarItem>
+        </BarStart>
+        <BarEnd>
+            <BarItem>
+                <Button Color="Color.Warning" Clicked="TestWithHardcodedId">
+                    🧪 Тест с ID=1
+                </Button>
+            </BarItem>
+            <BarItem>
+                <Button Color="Color.Primary" Clicked="ShowCreateModal">
+                    ➕ Добавить позицию
+                </Button>
+            </BarItem>
+        </BarEnd>
+    </BarMenu>
+</Bar>
 
 <!-- Статистика по заявке -->
 <Card>
@@ -156,6 +166,18 @@
                 </Field>
 
                 <Divider />
+                
+                <Card Class="mt-2" Color="Color.Warning">
+                    <CardBody>
+                        <small>
+                            <strong>Отладка:</strong><br />
+                            SelectedCatalogId: @selectedCatalogId<br />
+                            CatalogId в модели: @materialModel.CatalogId<br />
+                            Название: @materialModel.NameMaterial<br />
+                            Категория: @materialModel.CategoryMaterial
+                        </small>
+                    </CardBody>
+                </Card>
 
                 <!-- Основная информация -->
                 <div class="row">
@@ -218,7 +240,10 @@
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Ориентировочная цена</FieldLabel>
-                            <TextEdit @bind-Text="EstimatedPriceString" Placeholder="0.00" />
+                            <NumericEdit TValue="decimal"
+                                         @bind-Value="materialModel.EstimatedPrice"
+                                         Min="0"
+                                         Decimals="2" />
                         </Field>
                     </div>
                     <div class="col-md-6">
@@ -254,6 +279,47 @@
     [Parameter]
     public int ProposalId { get; set; }
 
+    // ▼▼▼ ВСТАВЬ ЭТО ПРЯМО ЗДЕСЬ ▼▼▼
+    protected override void OnParametersSet()
+    {
+        Console.WriteLine($"🎯 OnParametersSet - ProposalId: {ProposalId}");
+
+        // Проверяем URL напрямую
+        var currentUrl = Navigation.Uri;
+        Console.WriteLine($"🎯 Current URL: {currentUrl}");
+
+        // Парсим ID из URL
+        if (currentUrl.Contains("/proposal-material/"))
+        {
+            var urlParts = currentUrl.Split('/');
+            var idFromUrl = urlParts.Last();
+            Console.WriteLine($"🎯 ID from URL: {idFromUrl}");
+
+            if (int.TryParse(idFromUrl, out int parsedId) && parsedId != ProposalId)
+            {
+                Console.WriteLine($"🎯 Setting ProposalId to: {parsedId}");
+                ProposalId = parsedId;
+            }
+        }
+
+        base.OnParametersSet();
+    }
+
+    // Принудительно обновляем когда параметр меняется
+    protected override async Task OnParametersSetAsync()
+    {
+        Console.WriteLine($"🎯 OnParametersSetAsync - ProposalId: {ProposalId}");
+
+        if (ProposalId > 0)
+        {
+            await LoadProposal();
+            await LoadCatalog();
+            await LoadMaterials();
+            CalculateStatistics();
+            StateHasChanged();
+        }
+    }
+
     private List<ProposalMaterial> materials = new();
     private List<ProposalCatalog> catalogItems = new();
     private Proposal? proposal;
@@ -270,45 +336,81 @@
     private int totalQuantity = 0;
     private decimal totalEstimatedPrice = 0;
 
-    private string EstimatedPriceString
+    private decimal EstimatedPriceValue
     {
-        get => materialModel.EstimatedPrice == 0 ? "" : materialModel.EstimatedPrice.ToString("0.00");
-        set
-        {
-            if (decimal.TryParse(value, out decimal result))
-            {
-                materialModel.EstimatedPrice = result;
-            }
-            else if (string.IsNullOrEmpty(value))
-            {
-                materialModel.EstimatedPrice = 0;
-            }
-        }
+        get => materialModel.EstimatedPrice;
+        set => materialModel.EstimatedPrice = value;
     }
-    protected override void OnParametersSet()
-    {
-        Console.WriteLine($"OnParametersSet - ProposalId: {ProposalId}");
-        base.OnParametersSet();
-    }
+
+    // protected override void OnParametersSet()
+    // {
+    //     Console.WriteLine($"OnParametersSet - ProposalId: {ProposalId}");
+    //     base.OnParametersSet();
+    // }
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine($"OnInitializedAsync - ProposalId: {ProposalId}");
+        Console.WriteLine($"🔍 OnInitializedAsync - ProposalId: {ProposalId}");
+        Console.WriteLine($"🔍 Current URL: {Navigation.Uri}");
 
-        if (ProposalId > 0)
+        try
         {
-            await LoadProposal();
-            await LoadCatalog();
-            await LoadMaterials();
-            CalculateStatistics();
+            // Проверим все возможные способы получить ID
+            var uri = new Uri(Navigation.Uri);
+            var segments = uri.Segments;
+            Console.WriteLine($"🔍 URL segments: {string.Join(", ", segments)}");
+
+            if (ProposalId > 0)
+            {
+                Console.WriteLine($"✅ ProposalId is valid: {ProposalId}");
+                await LoadProposal();
+                await LoadCatalog();
+                await LoadMaterials();
+                CalculateStatistics();
+            }
+            else
+            {
+                Console.WriteLine($"❌ ProposalId is 0 or invalid");
+
+                // Попробуем извлечь ID из URL вручную
+                if (segments.Length >= 3 && int.TryParse(segments[2].Trim('/'), out int manualId))
+                {
+                    Console.WriteLine($"🔧 Extracted manual ID from URL: {manualId}");
+                    ProposalId = manualId;
+                    await LoadProposal();
+                    await LoadCatalog();
+                    await LoadMaterials();
+                    CalculateStatistics();
+                }
+                else
+                {
+                    // БЕЗОПАСНЫЙ alert с проверкой
+                    if (JSRuntime != null)
+                    {
+                        await JSRuntime.InvokeVoidAsync("alert",
+                            $"ProposalId не передан! URL: {Navigation.Uri}");
+                    }
+                }
+            }
         }
-        else
+        catch (Exception ex)
         {
-            await JSRuntime.InvokeVoidAsync("alert", "ProposalId не передан!");
+            Console.WriteLine($"❌ Error in OnInitializedAsync: {ex.Message}");
         }
     }
 
-    private async Task LoadProposal()
+    private async Task TestWithHardcodedId()
+    {
+        ProposalId = 1; // Используй существующий ID из базы
+        Console.WriteLine($"🧪 Using hardcoded ProposalId: {ProposalId}");
+        await LoadProposal();
+        await LoadCatalog();
+        await LoadMaterials();
+        CalculateStatistics();
+        StateHasChanged();
+    }
+
+        private async Task LoadProposal()
     {
         proposal = await ProposalService.GetById(ProposalId);
     }
@@ -321,6 +423,13 @@
     private async Task LoadCatalog()
     {
         catalogItems = await CatalogService.GetAll();
+        Console.WriteLine($"Loaded {catalogItems.Count} catalog items");
+
+        // Проверим что каталог не пустой
+        if (!catalogItems.Any())
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Каталог пустой! Добавьте материалы в каталог сначала.");
+        }
     }
 
     private void CalculateStatistics()
@@ -348,25 +457,10 @@
         StateHasChanged(); // обновим UI
     }
 
-    private void ShowEditModal(ProposalMaterial item)
+    private async void ShowEditModal(ProposalMaterial item)
     {
-        materialModel = new ProposalMaterial
-        {
-            ID = item.ID,
-            NameMaterial = item.NameMaterial,
-            CategoryMaterial = item.CategoryMaterial,
-            Code = item.Code,
-            Quantity = item.Quantity,
-            Comment = item.Comment,
-            StatusM = item.StatusM,
-            ManufacturerPartNumber = item.ManufacturerPartNumber,
-            ManufacturerName = item.ManufacturerName,
-            UnitOfMeasure = item.UnitOfMeasure,
-            EstimatedPrice = item.EstimatedPrice,
-            ProposalId = item.ProposalId,
-            CatalogId = item.CatalogId
-        };
-        selectedCatalogId = item.CatalogId;
+        materialModel = await MaterialService.GetById(item.ID);
+        selectedCatalogId = materialModel?.CatalogId;
         isEdit = true;
         isModalVisible = true;
     }
@@ -442,6 +536,8 @@
             var catalogItem = catalogItems.FirstOrDefault(c => c.ID == catalogId.Value);
             if (catalogItem != null)
             {
+                Console.WriteLine($"Selected catalog item: {catalogItem.Material}"); // Отладка
+
                 // Автозаполнение полей из каталога
                 materialModel.NameMaterial = catalogItem.Material;
                 materialModel.CategoryMaterial = catalogItem.Category;
@@ -449,14 +545,17 @@
                 materialModel.ManufacturerName = catalogItem.ManufacturerName;
                 materialModel.UnitOfMeasure = catalogItem.UnitOfMeasure;
                 materialModel.CatalogId = catalogId.Value;
+
+                // Принудительно обновляем UI
+                StateHasChanged();
             }
         }
         else
         {
             // Сброс связи с каталогом
             materialModel.CatalogId = null;
+            StateHasChanged();
         }
-        StateHasChanged();
     }
 
     private Color GetMaterialStatusColor(string status)

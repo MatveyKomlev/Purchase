@@ -39,6 +39,7 @@ public class ProposalMaterialService : IProposalMaterialService
     {
         await using var context = await CreateDbContextAsync();
         return await context.ProposalMaterials
+            .AsTracking()
             .Include(pm => pm.Proposal)
             .Include(pm => pm.Catalog)
             .FirstOrDefaultAsync(pm => pm.ID == id);

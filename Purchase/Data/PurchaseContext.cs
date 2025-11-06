@@ -55,7 +55,7 @@ public class PurchaseContext : DbContext
                   .HasForeignKey(pm => pm.ProposalId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Связь с ProposalCatalog (Many-to-One) - ОПЦИОНАЛЬНАЯ
+            // Связь с ProposalCatalog (Many-to-One)
             entity.HasOne(pm => pm.Catalog)
                   .WithMany(pc => pc.ProposalMaterials)
                   .HasForeignKey(pm => pm.CatalogId)

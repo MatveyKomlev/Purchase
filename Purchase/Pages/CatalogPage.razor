@@ -329,20 +329,15 @@
         isModalVisible = true;
     }
 
-    private void ShowEditModal(ProposalCatalog item)
+    private async void ShowEditModal(ProposalCatalog item)
     {
-        catalogModel = new ProposalCatalog
+        // Загружаем с отслеживанием изменений
+        catalogModel = await CatalogService.GetById(item.ID);
+        if (catalogModel != null)
         {
-            ID = item.ID,
-            Material = item.Material,
-            Category = item.Category,
-            ManufacturerName = item.ManufacturerName,
-            ManufacturerPartNumber = item.ManufacturerPartNumber,
-            UnitOfMeasure = item.UnitOfMeasure,
-            ProposalMaterials = item.ProposalMaterials
-        };
-        isEdit = true;
-        isModalVisible = true;
+            isEdit = true;
+            isModalVisible = true;
+        }
     }
 
     private async Task SaveItem()
@@ -383,8 +378,6 @@
 
     private void ViewCatalogItem(ProposalCatalog item)
     {
-        // Можно открыть модальное окно с детальной информацией
-        // или перейти на отдельную страницу
         ShowEditModal(item);
     }
 }

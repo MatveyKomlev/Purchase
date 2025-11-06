@@ -49,6 +49,7 @@ public class ProposalService : IProposalService
     {
         await using var context = await CreateDbContextAsync();
         return await context.Proposals
+            .AsTracking()
             .Include(p => p.Materials)
             .FirstOrDefaultAsync(p => p.ID == id);
     }
@@ -57,22 +58,28 @@ public class ProposalService : IProposalService
     public async Task Update(Proposal updatedProposal)
     {
         await using var context = await CreateDbContextAsync();
-        var proposal = await context.Proposals.AsTracking()
+
+        var existingProposal = await context.Proposals
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.ID == updatedProposal.ID);
 
-        if (proposal == null)
+        if (existingProposal == null)
             return;
 
-        // Обновляем все поля
-        proposal.Number = updatedProposal.Number;
-        proposal.Author = updatedProposal.Author;
-        proposal.Department = updatedProposal.Department;
-        proposal.Status = updatedProposal.Status;
-        proposal.Deadline = updatedProposal.Deadline;
-        proposal.Explanation = updatedProposal.Explanation;
-        proposal.Priority = updatedProposal.Priority;
+        UpdateProposalProperties(existingProposal, updatedProposal);
 
         await context.SaveChangesAsync();
+    }
+
+    private void UpdateProposalProperties(Proposal existing, Proposal updated)
+    {
+        existing.Number = updated.Number;
+        existing.Author = updated.Author;
+        existing.Department = updated.Department;
+        existing.Status = updated.Status;
+        existing.Deadline = updated.Deadline;
+        existing.Explanation = updated.Explanation;
+        existing.Priority = updated.Priority;
     }
 
     // Delete
