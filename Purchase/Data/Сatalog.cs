@@ -11,22 +11,26 @@ namespace Purchase.Data
         public int ID { get; set; }
 
         [Required(ErrorMessage = "Материал обязателен")]
+        [MaxLength(200)] 
         public string? Material { get; set; }
 
         [Required(ErrorMessage = "Категория обязательна")]
+        [MaxLength(100)] 
         public string? Category { get; set; }
 
-        [MaxLength(50)]
+        [MaxLength(100)]
         public string? ManufacturerPartNumber { get; set; }
 
-        [MaxLength(100)]
+        [MaxLength(150)] 
         public string? ManufacturerName { get; set; }
 
         [MaxLength(20)]
         public string? UnitOfMeasure { get; set; }
 
-        // Навигационное свойство к материалам заявок
-        public List<ProposalMaterial> ProposalMaterials { get; set; } = new();
+        [Required(ErrorMessage = "Цена обязательна")] 
+        [Range(0, int.MaxValue, ErrorMessage = "Цена не может быть отрицательной")]
+        public int Price { get; set; }
 
+        public virtual List<ProposalMaterial> ProposalMaterials { get; set; } = new();
     }
 }

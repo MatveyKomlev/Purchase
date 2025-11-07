@@ -17,79 +17,64 @@ public class ProposalService : IProposalService
         return await _contextFactory.CreateDbContextAsync();
     }
 
-    // Create
-    public async Task Create(Proposal newProposal)
+    public async Task CreateAsync(Proposal newProposal)
     {
-        if (string.IsNullOrWhiteSpace(newProposal.Author) ||
-            string.IsNullOrWhiteSpace(newProposal.Department) ||
-            string.IsNullOrWhiteSpace(newProposal.Number))
-            return;
+        // Валидация
+        if (!await ValidateProposalAsync(newProposal))
+            throw new ArgumentException("Некорректные данные заявки");
 
         await using var context = await CreateDbContextAsync();
 
-        // Автоматическая установка даты создания если не указана
         if (newProposal.DateCreation == default)
             newProposal.DateCreation = DateTime.Now;
+
+        if (string.IsNullOrWhiteSpace(newProposal.Number))
+            newProposal.Number = await GenerateProposalNumberAsync();
 
         await context.Proposals.AddAsync(newProposal);
         await context.SaveChangesAsync();
     }
 
-    // Read
-    public async Task<List<Proposal>> GetAllProposals()
+    public async Task<List<Proposal>> GetAllProposalsAsync()
     {
         await using var context = await CreateDbContextAsync();
         return await context.Proposals
             .Include(p => p.Materials)
+                .ThenInclude(m => m.Catalog) 
             .OrderByDescending(p => p.DateCreation)
+            .AsNoTracking() 
             .ToListAsync();
     }
 
-    public async Task<Proposal?> GetById(int id)
+    public async Task<Proposal?> GetByIdAsync(int id)
     {
+        if (id < 1) return null;
+
         await using var context = await CreateDbContextAsync();
         return await context.Proposals
-            .AsTracking()
             .Include(p => p.Materials)
+                .ThenInclude(m => m.Catalog) 
             .FirstOrDefaultAsync(p => p.ID == id);
     }
 
-    // Update
-    public async Task Update(Proposal updatedProposal)
+    public async Task UpdateAsync(Proposal updatedProposal)
     {
+        if (!await ValidateProposalAsync(updatedProposal))
+            throw new ArgumentException("Некорректные данные заявки");
+
         await using var context = await CreateDbContextAsync();
 
-        var existingProposal = await context.Proposals
-            .AsTracking()
-            .FirstOrDefaultAsync(x => x.ID == updatedProposal.ID);
-
-        if (existingProposal == null)
-            return;
-
-        UpdateProposalProperties(existingProposal, updatedProposal);
-
+        context.Proposals.Update(updatedProposal);
         await context.SaveChangesAsync();
     }
 
-    private void UpdateProposalProperties(Proposal existing, Proposal updated)
-    {
-        existing.Number = updated.Number;
-        existing.Author = updated.Author;
-        existing.Department = updated.Department;
-        existing.Status = updated.Status;
-        existing.Deadline = updated.Deadline;
-        existing.Explanation = updated.Explanation;
-        existing.Priority = updated.Priority;
-    }
-
-    // Delete
-    public async Task Delete(int id)
+    public async Task DeleteAsync(int id)
     {
         if (id < 1) return;
 
         await using var context = await CreateDbContextAsync();
         var proposal = await context.Proposals
-            .Include(p => p.Materials)
+            .Include(p => p.Materials) 
             .FirstOrDefaultAsync(p => p.ID == id);
 
         if (proposal != null)
@@ -99,11 +84,10 @@ public class ProposalService : IProposalService
         }
     }
 
-    // Бизнес-методы
-    public async Task ChangeStatus(int proposalId, ErpStatus newStatus)
+    public async Task ChangeStatusAsync(int proposalId, ErpStatus newStatus)
     {
         await using var context = await CreateDbContextAsync();
-        var proposal = await context.Proposals.AsTracking()
+        var proposal = await context.Proposals
             .FirstOrDefaultAsync(p => p.ID == proposalId);
 
         if (proposal != null)
@@ -113,31 +97,108 @@ public class ProposalService : IProposalService
         }
     }
 
-    public async Task<List<Proposal>> GetByStatus(ErpStatus status)
+    public async Task<List<Proposal>> GetByStatusAsync(ErpStatus status)
     {
         await using var context = await CreateDbContextAsync();
         return await context.Proposals
             .Where(p => p.Status == status)
             .Include(p => p.Materials)
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    public async Task<int> GetPositionsCount(int proposalId)
+    public async Task<int> GetPositionsCountAsync(int proposalId)
     {
         await using var context = await CreateDbContextAsync();
         return await context.ProposalMaterials
             .CountAsync(pm => pm.ProposalId == proposalId);
     }
+
+    public async Task<bool> ValidateProposalAsync(Proposal proposal)
+    {
+        if (proposal == null) return false;
+
+        // Проверка обязательных полей
+        if (string.IsNullOrWhiteSpace(proposal.Number) ||
+            string.IsNullOrWhiteSpace(proposal.Author) ||
+            string.IsNullOrWhiteSpace(proposal.Department))
+            return false;
+
+        if (proposal.ID == 0)
+        {
+            await using var context = await CreateDbContextAsync();
+            var exists = await context.Proposals
+                .AnyAsync(p => p.Number == proposal.Number);
+            if (exists) return false;
+        }
+
+        return true;
+    }
+
+    public async Task<string> GenerateProposalNumberAsync()
+    {
+        await using var context = await CreateDbContextAsync();
+
+        var year = DateTime.Now.Year;
+        var lastNumber = await context.Proposals
+            .Where(p => p.Number.StartsWith($"З-{year}-"))
+            .OrderByDescending(p => p.Number)
+            .Select(p => p.Number)
+            .FirstOrDefaultAsync();
+
+        if (string.IsNullOrEmpty(lastNumber))
+        {
+            return $"З-{year}-0001";
+        }
+
+        // Извлекаем номер и увеличиваем
+        var parts = lastNumber.Split('-');
+        if (parts.Length == 3 && int.TryParse(parts[2], out int lastNum))
+        {
+            return $"З-{year}-{(lastNum + 1):D4}";
+        }
+
+        return $"З-{year}-0001";
+    }
+
+    public async Task<bool> ExistsAsync(int id)
+    {
+        await using var context = await CreateDbContextAsync();
+        return await context.Proposals
+            .AnyAsync(p => p.ID == id);
+    }
+
+    public async Task<List<Proposal>> GetOverdueProposalsAsync()
+    {
+        await using var context = await CreateDbContextAsync();
+        return await context.Proposals
+            .Where(p => p.Deadline.HasValue &&
+                       p.Deadline.Value < DateTime.Now &&
+                       p.Status != ErpStatus.Approved)
+            .Include(p => p.Materials)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<int> GetTotalProposalsCountAsync()
+    {
+        await using var context = await CreateDbContextAsync();
+        return await context.Proposals.CountAsync();
+    }
 }
 
 public interface IProposalService
 {
-    Task Create(Proposal newProposal);
-    Task<List<Proposal>> GetAllProposals();
-    Task<Proposal?> GetById(int id);
-    Task Update(Proposal updatedProposal);
-    Task Delete(int id);
-    Task ChangeStatus(int proposalId, ErpStatus newStatus);
-    Task<List<Proposal>> GetByStatus(ErpStatus status);
-    Task<int> GetPositionsCount(int proposalId);
+    Task CreateAsync(Proposal newProposal);
+    Task<List<Proposal>> GetAllProposalsAsync();
+    Task<Proposal?> GetByIdAsync(int id);
+    Task UpdateAsync(Proposal updatedProposal);
+    Task DeleteAsync(int id);
+
+    Task ChangeStatusAsync(int proposalId, ErpStatus newStatus);
+    Task<List<Proposal>> GetByStatusAsync(ErpStatus status);
+    Task<int> GetPositionsCountAsync(int proposalId);
+
+    Task<bool> ValidateProposalAsync(Proposal proposal);
+    Task<string> GenerateProposalNumberAsync();
 }

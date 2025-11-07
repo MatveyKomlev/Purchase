@@ -17,7 +17,6 @@ namespace Purchase.Data
 
     public static class ErpStatusExtensions
     {
-        // Метод для получения локализованного имени статуса
         public static string GetName(this ErpStatus status)
         {
             var field = typeof(ErpStatus).GetField(status.ToString());
@@ -28,7 +27,7 @@ namespace Purchase.Data
                     return attribute.Description;
             }
 
-            return status.ToString(); // Если описание не найдено, возвращаем строковое имя
+            return status.ToString(); 
         }
     }
 }

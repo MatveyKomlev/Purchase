@@ -18,19 +18,14 @@
     <BarMenu>
         <BarStart>
             <BarItem>
-                <Button Color="Color.Secondary" Clicked="GoBack">
+                <Button Color="Color.Secondary" Clicked="@(() => GoBack())">
                     ↩️ Назад к заявкам
                 </Button>
             </BarItem>
         </BarStart>
         <BarEnd>
             <BarItem>
-                <Button Color="Color.Warning" Clicked="TestWithHardcodedId">
-                    🧪 Тест с ID=1
-                </Button>
-            </BarItem>
-            <BarItem>
-                <Button Color="Color.Primary" Clicked="ShowCreateModal">
+                <Button Color="Color.Primary" Clicked="@(() => ShowCreateModal())">
                     ➕ Добавить позицию
                 </Button>
             </BarItem>
@@ -38,8 +33,31 @@
     </BarMenu>
 </Bar>
 
+<!-- Информация о заявке -->
+@if (proposal != null)
+{
+    <Card Class="mt-3">
+        <CardBody>
+            <div class="row">
+                <div class="col-md-4">
+                    <strong>Заявка:</strong> @proposal.Number
+                </div>
+                <div class="col-md-4">
+                    <strong>Автор:</strong> @proposal.Author
+                </div>
+                <div class="col-md-4">
+                    <strong>Статус:</strong> 
+                    <Badge Color="@GetProposalStatusColor(proposal.Status)" Class="ms-1">
+                        @proposal.Status.GetName()
+                    </Badge>
+                </div>
+            </div>
+        </CardBody>
+    </Card>
+}
+
 <!-- Статистика по заявке -->
-<Card>
+<Card Class="mt-3">
     <CardBody>
         <div class="row text-center">
             <div class="col">
@@ -47,152 +65,186 @@
                 <small class="text-muted">Всего позиций</small>
             </div>
             <div class="col">
-                <h5 class="text-success">@totalQuantity</h5>
+                <h5 class="text-success">@totalQuantity.ToString("N0")</h5>
                 <small class="text-muted">Общее количество</small>
             </div>
             <div class="col">
-                <h5 class="text-warning">@totalEstimatedPrice.ToString("C2")</h5>
+                <h5 class="text-warning">@totalEstimatedPrice.ToString("C0")</h5>
                 <small class="text-muted">Ориентировочная сумма</small>
+            </div>
+            <div class="col">
+                <h5 class="text-info">@averagePrice.ToString("C0")</h5>
+                <small class="text-muted">Средняя цена</small>
             </div>
         </div>
     </CardBody>
 </Card>
 
-<DataGrid TItem="ProposalMaterial"
-          Data="materials"
-          @ref="dataGrid"
-          Editable="false"
-          ShowPager="true"
-          PageSize="10"
-          Class="mt-3">
-    <DataGridColumns>
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.NameMaterial)" Caption="Материал" Sortable="true" />
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.CategoryMaterial)" Caption="Категория" Sortable="true" />
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Code)" Caption="Код" Sortable="true" />
-        
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Quantity)" Caption="Кол-во" Sortable="true" TextAlignment="TextAlignment.Center">
-            <DisplayTemplate>
-                <Badge Color="Color.Info">
-                    @context.Quantity @context.UnitOfMeasure
-                </Badge>
-            </DisplayTemplate>
-        </DataGridColumn>
+@if (isLoading)
+{
+    <Card Class="mt-3">
+        <CardBody Class="text-center">
+            <Spinner Color="Color.Primary" />
+            <span class="ms-2">Загрузка материалов...</span>
+        </CardBody>
+    </Card>
+}
+else if (!materials.Any())
+{
+    <Card Class="mt-3">
+        <CardBody Class="text-center">
+            <Icon Name="IconName.Inbox" Size="IconSize.ExtraLarge" Class="text-muted mb-3" />
+            <h5>Позиции не найдены</h5>
+            <p class="text-muted">Добавьте первую позицию к заявке</p>
+            <Button Color="Color.Primary" Clicked="@(() => ShowCreateModal())">
+                ➕ Добавить позицию
+            </Button>
+        </CardBody>
+    </Card>
+}
+else
+{
+    <Card Class="mt-3">
+        <CardBody>
+            <DataGrid TItem="ProposalMaterial"
+                      Data="@materials"
+                      @ref="dataGrid"
+                      Editable="false"
+                      ShowPager="true"
+                      PageSize="10"
+                      Responsive="true"
+                      Class="table-striped">
+                <DataGridColumns>
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.NameMaterial)" Caption="Материал" Sortable="true" Filterable="true" />
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.CategoryMaterial)" Caption="Категория" Sortable="true" Filterable="true" />
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Code)" Caption="Код" Sortable="true" Width="120px" />
+                    
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Quantity)" Caption="Кол-во" Sortable="true" TextAlignment="TextAlignment.Center" Width="130px">
+                        <DisplayTemplate>
+                            <Badge Color="Color.Info" Outline="true">
+                                @context.Quantity.ToString("N0") @context.UnitOfMeasure
+                            </Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
 
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.EstimatedPrice)" Caption="Цена за ед." Sortable="true" TextAlignment="TextAlignment.End">
-            <DisplayTemplate>
-                @context.EstimatedPrice.ToString("C2")
-            </DisplayTemplate>
-        </DataGridColumn>
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.EstimatedPrice)" Caption="Цена за ед." Sortable="true" TextAlignment="TextAlignment.End" Width="150px">
+                        <DisplayTemplate>
+                            @context.EstimatedPrice.ToString("C0")
+                        </DisplayTemplate>
+                    </DataGridColumn>
 
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.TotalPrice)" Caption="Сумма" Sortable="true" TextAlignment="TextAlignment.End">
-            <DisplayTemplate>
-                <strong>@context.TotalPrice.ToString("C2")</strong>
-            </DisplayTemplate>
-        </DataGridColumn>
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.TotalPrice)" Caption="Сумма" Sortable="true" TextAlignment="TextAlignment.End" Width="150px">
+                        <DisplayTemplate>
+                            <strong class="text-success">@context.TotalPrice.ToString("C0")</strong>
+                        </DisplayTemplate>
+                    </DataGridColumn>
 
-        <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.StatusM)" Caption="Статус" Sortable="true">
-            <DisplayTemplate>
-                <Badge Color="@GetMaterialStatusColor(context.StatusM)" Class="text-uppercase">
-                    @context.StatusM
-                </Badge>
-            </DisplayTemplate>
-        </DataGridColumn>
+                    <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.StatusM)" Caption="Статус" Sortable="true" Width="140px">
+                        <DisplayTemplate>
+                            <Badge Color="@GetMaterialStatusColor(context.StatusM)" Class="text-uppercase">
+                                @context.StatusM.GetName()
+                            </Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
 
-        <DataGridColumn TItem="ProposalMaterial" Caption="Производитель" Sortable="true">
-            <DisplayTemplate>
-                @if (!string.IsNullOrEmpty(context.ManufacturerName))
-                {
-                    <small>
-                        <strong>@context.ManufacturerName</strong><br />
-                        @context.ManufacturerPartNumber
-                    </small>
-                }
-                else
-                {
-                    <span class="text-muted">Не указан</span>
-                }
-            </DisplayTemplate>
-        </DataGridColumn>
+                    <DataGridColumn TItem="ProposalMaterial" Caption="Производитель" Sortable="true" Filterable="true">
+                        <DisplayTemplate>
+                            @if (!string.IsNullOrEmpty(context.ManufacturerName))
+                            {
+                                <div>
+                                    <strong>@context.ManufacturerName</strong>
+                                    @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
+                                    {
+                                        <br />
+                                        <small class="text-muted">@context.ManufacturerPartNumber</small>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </DisplayTemplate>
+                    </DataGridColumn>
 
-        <DataGridColumn TItem="ProposalMaterial" TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false" Caption="Действия">
-            <DisplayTemplate>
-                @{
-                    var material = (ProposalMaterial)context;
-                }
-                <ButtonGroup Size="Size.Small">
-                    <Button Color="Color.Info" 
-                            Size="Size.Small"
-                            Clicked="@(() => ShowMaterialDetails(material))"
-                            Title="Детали">
-                        👁️
-                    </Button>
-                    <Button Color="Color.Warning"
-                            Size="Size.Small"
-                            Clicked="@(() => ShowEditModal(material))"
-                            Title="Редактировать">
-                        ✏️
-                    </Button>
-                    <Button Color="Color.Danger"
-                            Size="Size.Small"
-                            Clicked="@(() => DeleteItem(material.ID))"
-                            Title="Удалить">
-                        🗑️
-                    </Button>
-                </ButtonGroup>
-            </DisplayTemplate>
-        </DataGridColumn>
-    </DataGridColumns>
-</DataGrid>
+                    <DataGridColumn TItem="ProposalMaterial" TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false" Caption="Действия" Width="180px">
+                        <DisplayTemplate>
+                            @{
+                                var material = (ProposalMaterial)context;
+                            }
+                            <ButtonGroup Size="Size.Small">
+                                <Button Color="Color.Warning"
+                                        Size="Size.Small"
+                                        Clicked="@(async () => await ShowEditModal(material))"
+                                        Title="Редактировать">
+                                    ✏️
+                                </Button>
+                                <Button Color="Color.Danger"
+                                        Size="Size.Small"
+                                        Clicked="@(async () => await DeleteItem(material.ID))"
+                                        Title="Удалить">
+                                    🗑️
+                                </Button>
+                            </ButtonGroup>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        </CardBody>
+    </Card>
+}
 
 <!-- Модальное окно создания/редактирования позиции -->
 <Modal @bind-Visible="isModalVisible" Size="ModalSize.Large">
     <ModalContent>
         <ModalHeader>
             <ModalTitle>@(isEdit ? "Редактировать позицию" : "Добавить позицию")</ModalTitle>
-            <Button CloseButton Clicked="CloseModal" />
+            <Button CloseButton Clicked="@(() => CloseModal())" />
         </ModalHeader>
         <ModalBody>
-            <Validations @ref="validations">
+            <Validations @ref="validations" Model="@materialModel" ValidateOnLoad="false">
                 <!-- Выбор из каталога -->
                 <Field>
-                    <FieldLabel>Выбрать из каталога</FieldLabel>
-                    <Select TValue="int?" @bind-SelectedValue="selectedCatalogId" Changed="OnCatalogItemSelected">
+                    <FieldLabel>Выбрать из каталога (автозаполнение)</FieldLabel>
+                    <Select TValue="int?" @bind-SelectedValue="@selectedCatalogId">
+                        <SelectedValueChanged>
+                            @OnCatalogSelected
+                        </SelectedValueChanged>
                         <SelectItem Value="@((int?)null)">-- Выберите из каталога --</SelectItem>
                         @foreach (var item in catalogItems)
                         {
-                            <SelectItem Value="@item.ID">@item.Material (@item.Category)</SelectItem>
+                            <SelectItem Value="@item.ID">
+                                @item.Material - @item.Category (@item.Price.ToString("C0"))
+                            </SelectItem>
                         }
                     </Select>
+                    <HelpText>Все поля заполнятся автоматически. Можно редактировать.</HelpText>
                 </Field>
 
                 <Divider />
                 
-                <Card Class="mt-2" Color="Color.Warning">
-                    <CardBody>
-                        <small>
-                            <strong>Отладка:</strong><br />
-                            SelectedCatalogId: @selectedCatalogId<br />
-                            CatalogId в модели: @materialModel.CatalogId<br />
-                            Название: @materialModel.NameMaterial<br />
-                            Категория: @materialModel.CategoryMaterial
-                        </small>
-                    </CardBody>
-                </Card>
-
                 <!-- Основная информация -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Материал *</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.NameMaterial" Placeholder="Название материала" />
-                            <ValidationError>Название материала обязательно</ValidationError>
+                            <TextEdit @bind-Text="@materialModel.NameMaterial" 
+                                     Placeholder="Название материала">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </TextEdit>
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Категория *</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.CategoryMaterial" Placeholder="Категория материала" />
-                            <ValidationError>Категория обязательна</ValidationError>
+                            <TextEdit @bind-Text="@materialModel.CategoryMaterial" 
+                                     Placeholder="Категория материала">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </TextEdit>
                         </Field>
                     </div>
                 </div>
@@ -200,22 +252,28 @@
                 <div class="row">
                     <div class="col-md-4">
                         <Field>
-                            <FieldLabel>Код *</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.Code" Placeholder="Внутренний код" MaxLength="10" />
-                            <ValidationError>Код обязателен</ValidationError>
+                            <FieldLabel>Код</FieldLabel>
+                            <TextEdit @bind-Text="@materialModel.Code" 
+                                     Placeholder="Внутренний код" />
                         </Field>
                     </div>
                     <div class="col-md-4">
                         <Field>
                             <FieldLabel>Количество *</FieldLabel>
-                            <NumericEdit @bind-Value="materialModel.Quantity" Min="1" />
-                            <ValidationError>Количество должно быть больше 0</ValidationError>
+                            <NumericEdit TValue="int"
+                                        @bind-Value="@materialModel.Quantity"
+                                        Min="1">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </NumericEdit>
                         </Field>
                     </div>
                     <div class="col-md-4">
                         <Field>
                             <FieldLabel>Единица измерения</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.UnitOfMeasure" Placeholder="шт, кг, м и т.д." />
+                            <TextEdit @bind-Text="@materialModel.UnitOfMeasure" 
+                                     Placeholder="шт, кг, м и т.д." />
                         </Field>
                     </div>
                 </div>
@@ -225,13 +283,15 @@
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Производитель</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.ManufacturerName" Placeholder="Название производителя" />
+                            <TextEdit @bind-Text="@materialModel.ManufacturerName" 
+                                     Placeholder="Название производителя" />
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Партномер</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.ManufacturerPartNumber" Placeholder="Партномер производителя" />
+                            <TextEdit @bind-Text="@materialModel.ManufacturerPartNumber" 
+                                     Placeholder="Партномер производителя" />
                         </Field>
                     </div>
                 </div>
@@ -239,25 +299,35 @@
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
-                            <FieldLabel>Ориентировочная цена</FieldLabel>
-                            <NumericEdit TValue="decimal"
-                                         @bind-Value="materialModel.EstimatedPrice"
-                                         Min="0"
-                                         Decimals="2" />
+                            <FieldLabel>Ориентировочная цена *</FieldLabel>
+                            <NumericEdit TValue="int"
+                                         @bind-Value="@materialModel.EstimatedPrice"
+                                         Min="0">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </NumericEdit>
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Статус позиции *</FieldLabel>
-                            <TextEdit @bind-Text="materialModel.StatusM" Placeholder="Статус материала" />
-                            <ValidationError>Статус обязателен</ValidationError>
+                            <Select TValue="MaterialStatus" @bind-SelectedValue="@materialModel.StatusM">
+                                @foreach (var status in Enum.GetValues<MaterialStatus>())
+                                {
+                                    <SelectItem Value="@status">@status.GetName()</SelectItem>
+                                }
+                            </Select>
+                            <Feedback>
+                                <ValidationError />
+                            </Feedback>
                         </Field>
                     </div>
                 </div>
 
                 <Field>
                     <FieldLabel>Комментарий</FieldLabel>
-                    <TextEdit @bind-Text="materialModel.Comment" 
+                    <TextEdit @bind-Text="@materialModel.Comment" 
                              Placeholder="Дополнительная информация..." 
                              Multiline="true" 
                              Rows="3" />
@@ -265,10 +335,18 @@
             </Validations>
         </ModalBody>
         <ModalFooter>
-            <Button Color="Color.Primary" Clicked="SaveItem">
+            <Button Color="Color.Primary" 
+                    Clicked="@(async () => await SaveItem())"
+                    Disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <Spinner Size="SpinnerSize.Small" />
+                }
                 💾 @(isEdit ? "Обновить" : "Создать")
             </Button>
-            <Button Color="Color.Secondary" Clicked="CloseModal">
+            <Button Color="Color.Secondary" 
+                    Clicked="@(() => CloseModal())"
+                    Disabled="@isSaving">
                 ❌ Отмена
             </Button>
         </ModalFooter>
@@ -279,47 +357,6 @@
     [Parameter]
     public int ProposalId { get; set; }
 
-    // ▼▼▼ ВСТАВЬ ЭТО ПРЯМО ЗДЕСЬ ▼▼▼
-    protected override void OnParametersSet()
-    {
-        Console.WriteLine($"🎯 OnParametersSet - ProposalId: {ProposalId}");
-
-        // Проверяем URL напрямую
-        var currentUrl = Navigation.Uri;
-        Console.WriteLine($"🎯 Current URL: {currentUrl}");
-
-        // Парсим ID из URL
-        if (currentUrl.Contains("/proposal-material/"))
-        {
-            var urlParts = currentUrl.Split('/');
-            var idFromUrl = urlParts.Last();
-            Console.WriteLine($"🎯 ID from URL: {idFromUrl}");
-
-            if (int.TryParse(idFromUrl, out int parsedId) && parsedId != ProposalId)
-            {
-                Console.WriteLine($"🎯 Setting ProposalId to: {parsedId}");
-                ProposalId = parsedId;
-            }
-        }
-
-        base.OnParametersSet();
-    }
-
-    // Принудительно обновляем когда параметр меняется
-    protected override async Task OnParametersSetAsync()
-    {
-        Console.WriteLine($"🎯 OnParametersSetAsync - ProposalId: {ProposalId}");
-
-        if (ProposalId > 0)
-        {
-            await LoadProposal();
-            await LoadCatalog();
-            await LoadMaterials();
-            CalculateStatistics();
-            StateHasChanged();
-        }
-    }
-
     private List<ProposalMaterial> materials = new();
     private List<ProposalCatalog> catalogItems = new();
     private Proposal? proposal;
@@ -328,108 +365,90 @@
     private int? selectedCatalogId;
     private bool isModalVisible = false;
     private bool isEdit = false;
+    private bool isLoading = true;
+    private bool isSaving = false;
     private Validations? validations;
     private DataGrid<ProposalMaterial>? dataGrid;
 
     // Статистика
     private int totalPositions = 0;
     private int totalQuantity = 0;
-    private decimal totalEstimatedPrice = 0;
-
-    private decimal EstimatedPriceValue
-    {
-        get => materialModel.EstimatedPrice;
-        set => materialModel.EstimatedPrice = value;
-    }
-
-    // protected override void OnParametersSet()
-    // {
-    //     Console.WriteLine($"OnParametersSet - ProposalId: {ProposalId}");
-    //     base.OnParametersSet();
-    // }
+    private int totalEstimatedPrice = 0;
+    private int averagePrice = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine($"🔍 OnInitializedAsync - ProposalId: {ProposalId}");
-        Console.WriteLine($"🔍 Current URL: {Navigation.Uri}");
-
         try
         {
-            // Проверим все возможные способы получить ID
-            var uri = new Uri(Navigation.Uri);
-            var segments = uri.Segments;
-            Console.WriteLine($"🔍 URL segments: {string.Join(", ", segments)}");
-
             if (ProposalId > 0)
             {
-                Console.WriteLine($"✅ ProposalId is valid: {ProposalId}");
-                await LoadProposal();
-                await LoadCatalog();
-                await LoadMaterials();
-                CalculateStatistics();
+                await LoadData();
             }
             else
             {
-                Console.WriteLine($"❌ ProposalId is 0 or invalid");
-
-                // Попробуем извлечь ID из URL вручную
-                if (segments.Length >= 3 && int.TryParse(segments[2].Trim('/'), out int manualId))
-                {
-                    Console.WriteLine($"🔧 Extracted manual ID from URL: {manualId}");
-                    ProposalId = manualId;
-                    await LoadProposal();
-                    await LoadCatalog();
-                    await LoadMaterials();
-                    CalculateStatistics();
-                }
-                else
-                {
-                    // БЕЗОПАСНЫЙ alert с проверкой
-                    if (JSRuntime != null)
-                    {
-                        await JSRuntime.InvokeVoidAsync("alert",
-                            $"ProposalId не передан! URL: {Navigation.Uri}");
-                    }
-                }
+                await ShowError("ID заявки не указан!");
+                Navigation.NavigateTo("/proposals");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Error in OnInitializedAsync: {ex.Message}");
+            await ShowError($"Ошибка инициализации: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
 
-    private async Task TestWithHardcodedId()
+    protected override async Task OnParametersSetAsync()
     {
-        ProposalId = 1; // Используй существующий ID из базы
-        Console.WriteLine($"🧪 Using hardcoded ProposalId: {ProposalId}");
-        await LoadProposal();
-        await LoadCatalog();
-        await LoadMaterials();
-        CalculateStatistics();
-        StateHasChanged();
+        if (ProposalId > 0)
+        {
+            await LoadData();
+        }
     }
 
-        private async Task LoadProposal()
+    private async Task LoadData()
     {
-        proposal = await ProposalService.GetById(ProposalId);
+        try
+        {
+            var proposalExists = await MaterialService.ProposalExistsAsync(ProposalId);
+            if (!proposalExists)
+            {
+                await ShowError($"Заявка с ID {ProposalId} не найдена!");
+                Navigation.NavigateTo("/proposals");
+                return;
+            }
+
+            await LoadProposal();
+            await LoadCatalog();
+            await LoadMaterials();
+            CalculateStatistics();
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка загрузки данных: {ex.Message}");
+        }
+    }
+
+    private async Task LoadProposal()
+    {
+        proposal = await ProposalService.GetByIdAsync(ProposalId);
+        if (proposal == null)
+        {
+            await ShowError($"Заявка {ProposalId} не найдена в базе!");
+        }
     }
 
     private async Task LoadMaterials()
     {
-        materials = await MaterialService.GetByProposalId(ProposalId);
+        materials = await MaterialService.GetByProposalIdAsync(ProposalId);
     }
 
     private async Task LoadCatalog()
     {
-        catalogItems = await CatalogService.GetAll();
-        Console.WriteLine($"Loaded {catalogItems.Count} catalog items");
-
-        // Проверим что каталог не пустой
-        if (!catalogItems.Any())
-        {
-            await JSRuntime.InvokeVoidAsync("alert", "Каталог пустой! Добавьте материалы в каталог сначала.");
-        }
+        catalogItems = await CatalogService.GetAllAsync();
     }
 
     private void CalculateStatistics()
@@ -437,85 +456,154 @@
         totalPositions = materials.Count;
         totalQuantity = materials.Sum(m => m.Quantity);
         totalEstimatedPrice = materials.Sum(m => m.TotalPrice);
+        averagePrice = totalPositions > 0 ? totalEstimatedPrice / totalPositions : 0;
     }
 
     private void ShowCreateModal()
     {
-        Console.WriteLine($"Creating material for ProposalId: {ProposalId}"); // для отладки
-
         materialModel = new ProposalMaterial
         {
-            ProposalId = ProposalId, 
-            StatusM = "Новый",
+            ProposalId = ProposalId,
+            StatusM = MaterialStatus.New,
             UnitOfMeasure = "шт",
-            Quantity = 1 // установи значение по умолчанию
+            Quantity = 1,
+            EstimatedPrice = 0
         };
         selectedCatalogId = null;
         isEdit = false;
         isModalVisible = true;
-
-        StateHasChanged(); // обновим UI
+        StateHasChanged();
     }
 
-    private async void ShowEditModal(ProposalMaterial item)
+    private async Task ShowEditModal(ProposalMaterial item)
     {
-        materialModel = await MaterialService.GetById(item.ID);
-        selectedCatalogId = materialModel?.CatalogId;
-        isEdit = true;
-        isModalVisible = true;
+        try
+        {
+            var material = await MaterialService.GetByIdAsync(item.ID);
+            if (material != null)
+            {
+                materialModel = material;
+                selectedCatalogId = material.CatalogId;
+                isEdit = true;
+                isModalVisible = true;
+                StateHasChanged();
+            }
+            else
+            {
+                await ShowError("Материал не найден!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка загрузки материала: {ex.Message}");
+        }
     }
 
     private async Task SaveItem()
     {
+        if (validations == null) return;
+
         try
         {
-            if (await validations!.ValidateAll())
+            isSaving = true;
+            StateHasChanged();
+
+            if (await validations.ValidateAll())
             {
+                materialModel.ProposalId = ProposalId;
+
                 if (isEdit)
-                    await MaterialService.Update(materialModel);
+                {
+                    await MaterialService.UpdateAsync(materialModel);
+                    await ShowSuccess("Позиция успешно обновлена!");
+                }
                 else
-                    await MaterialService.Create(materialModel);
+                {
+                    await MaterialService.CreateAsync(materialModel);
+                    await ShowSuccess("Позиция успешно создана!");
+                }
 
                 CloseModal();
                 await LoadMaterials();
                 CalculateStatistics();
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка сохранения: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+                "Вы уверены, что хотите удалить эту позицию?");
+            
+            if (confirmed)
+            {
+                await MaterialService.DeleteAsync(id);
+                await ShowSuccess("Позиция успешно удалена!");
+                await LoadMaterials();
+                CalculateStatistics();
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка удаления: {ex.Message}");
+        }
+    }
+
+    private void OnCatalogSelected(int? catalogId)
+    {
+        try
+        {
+            if (catalogId.HasValue)
+            {
+                var catalogItem = catalogItems.FirstOrDefault(c => c.ID == catalogId.Value);
+                if (catalogItem != null)
+                {
+                    // Заполняем поля из каталога
+                    materialModel.NameMaterial = catalogItem.Material;
+                    materialModel.CategoryMaterial = catalogItem.Category;
+                    materialModel.ManufacturerPartNumber = catalogItem.ManufacturerPartNumber;
+                    materialModel.ManufacturerName = catalogItem.ManufacturerName;
+                    materialModel.UnitOfMeasure = catalogItem.UnitOfMeasure;
+                    materialModel.EstimatedPrice = catalogItem.Price;
+                    materialModel.Code = catalogItem.ManufacturerPartNumber ?? $"CAT-{catalogItem.ID}";
+                    materialModel.CatalogId = catalogId.Value;
+                    materialModel.StatusM = MaterialStatus.InCatalog;
+
+                    StateHasChanged();
+                    _ = ShowInfo($"Материал '{catalogItem.Material}' загружен из каталога!");
+                }
+            }
+            else
+            {
+                materialModel.CatalogId = null;
+                materialModel.StatusM = MaterialStatus.New;
                 StateHasChanged();
             }
         }
         catch (Exception ex)
         {
-            var errorMessage = GetFullExceptionMessage(ex);
-            await JSRuntime.InvokeVoidAsync("alert", $"Ошибка при сохранении: {errorMessage}");
-        }
-    }
-
-    private string GetFullExceptionMessage(Exception ex)
-    {
-        var message = ex.Message;
-        var inner = ex.InnerException;
-        while (inner != null)
-        {
-            message += $"\n➡️ {inner.Message}";
-            inner = inner.InnerException;
-        }
-        return message;
-    }
-
-    private async Task DeleteItem(int id)
-    {
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Вы уверены, что хотите удалить эту позицию?"))
-        {
-            await MaterialService.Delete(id);
-            await LoadMaterials();
-            CalculateStatistics();
+            _ = ShowError($"Ошибка выбора из каталога: {ex.Message}");
         }
     }
 
     private void CloseModal()
     {
         isModalVisible = false;
+        isSaving = false;
         selectedCatalogId = null;
         validations?.ClearAll();
+        StateHasChanged();
     }
 
     private void GoBack()
@@ -523,52 +611,40 @@
         Navigation.NavigateTo("/proposals");
     }
 
-    private void ShowMaterialDetails(ProposalMaterial material)
+    private Color GetMaterialStatusColor(MaterialStatus status)
     {
-        // Можно открыть модальное окно с детальной информацией
-        // или перейти на отдельную страницу
-    }
-
-    private void OnCatalogItemSelected(int? catalogId)
-    {
-        if (catalogId.HasValue)
+        return status switch
         {
-            var catalogItem = catalogItems.FirstOrDefault(c => c.ID == catalogId.Value);
-            if (catalogItem != null)
-            {
-                Console.WriteLine($"Selected catalog item: {catalogItem.Material}"); // Отладка
-
-                // Автозаполнение полей из каталога
-                materialModel.NameMaterial = catalogItem.Material;
-                materialModel.CategoryMaterial = catalogItem.Category;
-                materialModel.ManufacturerPartNumber = catalogItem.ManufacturerPartNumber;
-                materialModel.ManufacturerName = catalogItem.ManufacturerName;
-                materialModel.UnitOfMeasure = catalogItem.UnitOfMeasure;
-                materialModel.CatalogId = catalogId.Value;
-
-                // Принудительно обновляем UI
-                StateHasChanged();
-            }
-        }
-        else
-        {
-            // Сброс связи с каталогом
-            materialModel.CatalogId = null;
-            StateHasChanged();
-        }
-    }
-
-    private Color GetMaterialStatusColor(string status)
-    {
-        return status?.ToLower() switch
-        {
-            "новый" => Color.Info,
-            "в обработке" => Color.Warning,
-            "одобрен" => Color.Success,
-            "отклонен" => Color.Danger,
-            "заказан" => Color.Primary,
-            "получен" => Color.Success,
+            MaterialStatus.New => Color.Info,
+            MaterialStatus.InCatalog => Color.Success,
+            MaterialStatus.Closed => Color.Secondary,
             _ => Color.Secondary
         };
+    }
+
+    private Color GetProposalStatusColor(ErpStatus status)
+    {
+        return status switch
+        {
+            ErpStatus.InProgress => Color.Warning,
+            ErpStatus.Approved => Color.Success,
+            ErpStatus.Rejected => Color.Danger,
+            _ => Color.Secondary
+        };
+    }
+
+    private async Task ShowSuccess(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", $"✅ {message}");
+    }
+
+    private async Task ShowError(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", $"❌ {message}");
+    }
+
+    private async Task ShowInfo(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", $"ℹ️ {message}");
     }
 }

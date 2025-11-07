@@ -19,13 +19,13 @@
                 <Field>
                     <FieldLabel>Поиск:</FieldLabel>
                     <TextEdit @bind-Text="searchTerm" Placeholder="Поиск по названию или артикулу..." 
-                             Changed="OnSearchChanged" />
+                             Changed="@OnSearchChanged" />
                 </Field>
             </BarItem>
         </BarStart>
         <BarEnd>
             <BarItem>
-                <Button Color="Color.Primary" Clicked="ShowCreateModal">
+                <Button Color="Color.Primary" Clicked="@(() => ShowCreateModal())">
                     ➕ Добавить материал
                 </Button>
             </BarItem>
@@ -49,211 +49,290 @@
                 <h5 class="text-warning">@materialsWithManufacturer</h5>
                 <small class="text-muted">С указанием производителя</small>
             </div>
+            <div class="col">
+                <h5 class="text-info">@totalUsage</h5>
+                <small class="text-muted">Использований в заявках</small>
+            </div>
         </div>
     </CardBody>
 </Card>
 
-<DataGrid TItem="ProposalCatalog"
-          Data="filteredCatalogItems"
-          @ref="dataGrid"
-          Editable="false"
-          ShowPager="true"
-          PageSize="10">
-    <DataGridColumns>
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.ID)" Caption="ID" Sortable="true" />
-        
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Material)" Caption="Материал" Sortable="true">
-            <DisplayTemplate>
-                <div>
-                    <strong>@context.Material</strong>
-                    @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
-                    {
-                        <br />
-                        <small class="text-muted">Артикул: @context.ManufacturerPartNumber</small>
-                    }
-                </div>
-            </DisplayTemplate>
-        </DataGridColumn>
-
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Category)" Caption="Категория" Sortable="true">
-            <DisplayTemplate>
-                <Badge Color="Color.Info" Class="text-uppercase">
-                    @context.Category
-                </Badge>
-            </DisplayTemplate>
-        </DataGridColumn>
-
-        <DataGridColumn TItem="ProposalCatalog" Caption="Производитель" Sortable="true">
-            <DisplayTemplate>
-                @if (!string.IsNullOrEmpty(context.ManufacturerName))
-                {
-                    <div>
-                        <strong>@context.ManufacturerName</strong>
-                        @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
-                        {
-                            <br />
-                            <small class="text-muted">@context.ManufacturerPartNumber</small>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <span class="text-muted">Не указан</span>
-                }
-            </DisplayTemplate>
-        </DataGridColumn>
-
-        <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.UnitOfMeasure)" Caption="Ед. изм." Sortable="true" TextAlignment="TextAlignment.Center">
-            <DisplayTemplate>
-                <Badge Color="Color.Secondary">
-                    @(string.IsNullOrEmpty(context.UnitOfMeasure) ? "—" : context.UnitOfMeasure)
-                </Badge>
-            </DisplayTemplate>
-        </DataGridColumn>
-
-        <DataGridColumn TItem="ProposalCatalog" Caption="Использование" Sortable="true" TextAlignment="TextAlignment.Center">
-            <DisplayTemplate>
-                @{
-                    var usageCount = context.ProposalMaterials?.Count ?? 0;
-                }
-                @if (usageCount > 0)
-                {
-                    <Tooltip Text="@($"Используется в {usageCount} заявках")">
-                        <Badge Color="Color.Success">
-                            @usageCount
-                        </Badge>
-                    </Tooltip>
-                }
-                else
-                {
-                    <Badge Color="Color.Light" Class="text-dark">0</Badge>
-                }
-            </DisplayTemplate>
-        </DataGridColumn>
-
-        <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false" Caption="Действия">
-            <DisplayTemplate>
-                @{
-                    var catalogItem = (ProposalCatalog)context;
-                    var canDelete = catalogItem.ProposalMaterials?.Count == 0;
-                }
-                <ButtonGroup Size="Size.Small">
-                    <Button Color="Color.Info" 
-                            Size="Size.Small"
-                            Clicked="@(() => ViewCatalogItem(catalogItem))"
-                            Title="Просмотр">
-                        👁️
-                    </Button>
+@if (isLoading)
+{
+    <Card Class="mt-3">
+        <CardBody Class="text-center">
+            <Spinner Color="Color.Primary" />
+            <span class="ms-2">Загрузка каталога...</span>
+        </CardBody>
+    </Card>
+}
+else if (!filteredCatalogItems.Any())
+{
+    <Card Class="mt-3">
+        <CardBody Class="text-center">
+            <Icon Name="IconName.Inbox" Size="IconSize.ExtraLarge" Class="text-muted mb-3" />
+            <h5>Материалы не найдены</h5>
+            <p class="text-muted">@(string.IsNullOrEmpty(searchTerm) ? "Добавьте первый материал в каталог" : "По вашему запросу ничего не найдено")</p>
+            @if (string.IsNullOrEmpty(searchTerm))
+            {
+                <Button Color="Color.Primary" Clicked="@(() => ShowCreateModal())">
+                    ➕ Добавить материал
+                </Button>
+            }
+        </CardBody>
+    </Card>
+}
+else
+{
+    <Card Class="mt-3">
+        <CardBody>
+            <DataGrid TItem="ProposalCatalog"
+                      Data="@filteredCatalogItems"
+                      @ref="dataGrid"
+                      Editable="false"
+                      ShowPager="true"
+                      PageSize="10"
+                      Responsive="true"
+                      Class="table-striped">
+                <DataGridColumns>
+                    <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.ID)" Caption="ID" Sortable="true" Width="80px" />
                     
-                    <Button Color="Color.Warning"
-                            Size="Size.Small"
-                            Clicked="@(() => ShowEditModal(catalogItem))"
-                            Title="Редактировать">
-                        ✏️
-                    </Button>
-                    
-                    <Button Color="Color.Danger"
-                            Size="Size.Small"
-                            Hidden="@(!canDelete)"
-                            Clicked="@(() => DeleteItem(catalogItem.ID))"
-                            Title="Удалить">
-                        🗑️
-                    </Button>
+                    <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Material)" Caption="Материал" Sortable="true" Filterable="true">
+                        <DisplayTemplate>
+                            <div>
+                                <strong>@context.Material</strong>
+                                @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
+                                {
+                                    <br />
+                                    <small class="text-muted">Артикул: @context.ManufacturerPartNumber</small>
+                                }
+                            </div>
+                        </DisplayTemplate>
+                    </DataGridColumn>
 
-                    <Button Color="Color.Secondary"
-                            Size="Size.Small"
-                            Hidden="@canDelete"
-                            Title="Нельзя удалить - используется в заявках"
-                            Disabled="true">
-                        ⚠️
-                    </Button>
-                </ButtonGroup>
-            </DisplayTemplate>
-        </DataGridColumn>
-    </DataGridColumns>
-</DataGrid>
+                    <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Category)" Caption="Категория" Sortable="true" Filterable="true" Width="150px">
+                        <DisplayTemplate>
+                            <Badge Color="Color.Info" Class="text-uppercase">
+                                @context.Category
+                            </Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Price)" Caption="Цена" Sortable="true" TextAlignment="TextAlignment.End" Width="120px">
+                        <DisplayTemplate>
+                            <strong class="text-success">@context.Price.ToString("C0")</strong>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProposalCatalog" Caption="Производитель" Sortable="true" Filterable="true">
+                        <DisplayTemplate>
+                            @if (!string.IsNullOrEmpty(context.ManufacturerName))
+                            {
+                                <div>
+                                    <strong>@context.ManufacturerName</strong>
+                                    @if (!string.IsNullOrEmpty(context.ManufacturerPartNumber))
+                                    {
+                                        <br />
+                                        <small class="text-muted">@context.ManufacturerPartNumber</small>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.UnitOfMeasure)" Caption="Ед. изм." Sortable="true" TextAlignment="TextAlignment.Center" Width="100px">
+                        <DisplayTemplate>
+                            <Badge Color="Color.Secondary">
+                                @(string.IsNullOrEmpty(context.UnitOfMeasure) ? "—" : context.UnitOfMeasure)
+                            </Badge>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TItem="ProposalCatalog" Caption="Использование" Sortable="true" TextAlignment="TextAlignment.Center" Width="120px">
+                        <DisplayTemplate>
+                            @{
+                                var usageCount = context.ProposalMaterials?.Count ?? 0;
+                            }
+                            @if (usageCount > 0)
+                            {
+                                <Tooltip Text="@($"Используется в {usageCount} заявках")">
+                                    <Badge Color="Color.Success">
+                                        @usageCount
+                                    </Badge>
+                                </Tooltip>
+                            }
+                            else
+                            {
+                                <Badge Color="Color.Light" Class="text-dark">0</Badge>
+                            }
+                        </DisplayTemplate>
+                    </DataGridColumn>
+
+                    <DataGridColumn TextAlignment="TextAlignment.Center" Filterable="false" Sortable="false" Caption="Действия" Width="180px">
+                        <DisplayTemplate>
+                            @{
+                                var catalogItem = (ProposalCatalog)context;
+                                var canDelete = (catalogItem.ProposalMaterials?.Count ?? 0) == 0;
+                            }
+                            <ButtonGroup Size="Size.Small">
+                                <Button Color="Color.Warning"
+                                        Size="Size.Small"
+                                        Clicked="@(async () => await ShowEditModal(catalogItem))"
+                                        Title="Редактировать">
+                                    ✏️
+                                </Button>
+                                
+                                <Button Color="Color.Danger"
+                                        Size="Size.Small"
+                                        Hidden="@(!canDelete)"
+                                        Clicked="@(async () => await DeleteItem(catalogItem.ID))"
+                                        Title="Удалить">
+                                    🗑️
+                                </Button>
+
+                                <Button Color="Color.Secondary"
+                                        Size="Size.Small"
+                                        Hidden="@canDelete"
+                                        Title="Нельзя удалить - используется в заявках"
+                                        Disabled="true">
+                                    ⚠️
+                                </Button>
+                            </ButtonGroup>
+                        </DisplayTemplate>
+                    </DataGridColumn>
+                </DataGridColumns>
+            </DataGrid>
+        </CardBody>
+    </Card>
+}
 
 <!-- Модальное окно создания/редактирования -->
 <Modal @bind-Visible="isModalVisible" Size="ModalSize.Large">
     <ModalContent>
         <ModalHeader>
             <ModalTitle>@(isEdit ? "Редактировать материал" : "Добавить материал")</ModalTitle>
-            <Button CloseButton Clicked="CloseModal" />
+            <Button CloseButton Clicked="@(() => CloseModal())" />
         </ModalHeader>
         <ModalBody>
-            <Validations @ref="validations">
+            <Validations @ref="validations" Model="@catalogModel" ValidateOnLoad="false">
+                <!-- Основная информация -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Материал *</FieldLabel>
-                            <TextEdit @bind-Text="catalogModel.Material" Placeholder="Название материала" />
-                            <ValidationError>Название материала обязательно</ValidationError>
+                            <TextEdit @bind-Text="@catalogModel.Material" 
+                                     Placeholder="Название материала">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </TextEdit>
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Категория *</FieldLabel>
-                            <TextEdit @bind-Text="catalogModel.Category" Placeholder="Категория материала" />
-                            <ValidationError>Категория обязательна</ValidationError>
+                            <TextEdit @bind-Text="@catalogModel.Category" 
+                                     Placeholder="Категория материала">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </TextEdit>
                         </Field>
                     </div>
                 </div>
 
+                <!-- Производитель -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Производитель</FieldLabel>
-                            <TextEdit @bind-Text="catalogModel.ManufacturerName" Placeholder="Название производителя" />
+                            <TextEdit @bind-Text="@catalogModel.ManufacturerName" 
+                                     Placeholder="Название производителя" />
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Партномер</FieldLabel>
-                            <TextEdit @bind-Text="catalogModel.ManufacturerPartNumber" Placeholder="Партномер производителя" />
+                            <TextEdit @bind-Text="@catalogModel.ManufacturerPartNumber" 
+                                     Placeholder="Партномер производителя" />
                         </Field>
                     </div>
                 </div>
 
+                <!-- Единица измерения и цена -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Единица измерения</FieldLabel>
-                            <InputSelect TValue="string" @bind-Value="catalogModel.UnitOfMeasure" class="form-control">
-                                <option value="">— Выберите —</option>
-                                <option value="шт">Штуки (шт)</option>
-                                <option value="кг">Килограммы (кг)</option>
-                                <option value="м">Метры (м)</option>
-                                <option value="л">Литры (л)</option>
-                                <option value="уп">Упаковки (уп)</option>
-                                <option value="компл">Комплекты (компл)</option>
-                            </InputSelect>
+                            <TextEdit @bind-Text="@catalogModel.UnitOfMeasure" 
+                                     Placeholder="Выберите единицу измерения">
+                                <Dropdown>
+                                    <DropdownToggle Color="Color.Secondary" Split="true" />
+                                    <DropdownMenu>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure(""))">— Выберите —</DropdownItem>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("шт"))">Штуки (шт)</DropdownItem>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("кг"))">Килограммы (кг)</DropdownItem>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("м"))">Метры (м)</DropdownItem>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("л"))">Литры (л)</DropdownItem>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("уп"))">Упаковки (уп)</DropdownItem>
+                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("компл"))">Комплекты (компл)</DropdownItem>
+                                    </DropdownMenu>
+                                </Dropdown>
+                            </TextEdit>
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
-                            <FieldLabel>Использование в заявках</FieldLabel>
-                            <div class="form-control-plaintext">
-                                @if (isEdit && catalogModel.ProposalMaterials?.Count > 0)
-                                {
-                                    <Badge Color="Color.Info">
-                                        Используется в @catalogModel.ProposalMaterials.Count заявках
-                                    </Badge>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">Не используется</span>
-                                }
-                            </div>
+                            <FieldLabel>Цена *</FieldLabel>
+                            <NumericEdit TValue="int"
+                                         @bind-Value="@catalogModel.Price"
+                                         Min="0">
+                                <Feedback>
+                                    <ValidationError />
+                                </Feedback>
+                            </NumericEdit>
                         </Field>
                     </div>
                 </div>
+
+                <!-- Информация об использовании -->
+                @if (isEdit)
+                {
+                    <Field>
+                        <FieldLabel>Использование в заявках</FieldLabel>
+                        <div class="form-control-plaintext">
+                            @if ((catalogModel.ProposalMaterials?.Count ?? 0) > 0)
+                            {
+                                <Badge Color="Color.Info">
+                                    Используется в @catalogModel.ProposalMaterials.Count заявках
+                                </Badge>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Не используется</span>
+                            }
+                        </div>
+                    </Field>
+                }
             </Validations>
         </ModalBody>
         <ModalFooter>
-            <Button Color="Color.Primary" Clicked="SaveItem">
+            <Button Color="Color.Primary" 
+                    Clicked="@(async () => await SaveItem())"
+                    Disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <Spinner Size="SpinnerSize.Small" />
+                }
                 💾 @(isEdit ? "Обновить" : "Создать")
             </Button>
-            <Button Color="Color.Secondary" Clicked="CloseModal">
+            <Button Color="Color.Secondary" 
+                    Clicked="@(() => CloseModal())"
+                    Disabled="@isSaving">
                 ❌ Отмена
             </Button>
         </ModalFooter>
@@ -267,6 +346,8 @@
     private string searchTerm = "";
     private bool isModalVisible = false;
     private bool isEdit = false;
+    private bool isLoading = true;
+    private bool isSaving = false;
     private Validations? validations;
     private DataGrid<ProposalCatalog>? dataGrid;
 
@@ -274,16 +355,28 @@
     private int totalItems = 0;
     private int uniqueCategories = 0;
     private int materialsWithManufacturer = 0;
+    private int totalUsage = 0;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCatalog();
-        CalculateStatistics();
+        try
+        {
+            await LoadCatalog();
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка загрузки каталога: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadCatalog()
     {
-        catalogItems = await CatalogService.GetAll();
+        catalogItems = await CatalogService.GetAllAsync();
         ApplyFilter();
     }
 
@@ -311,8 +404,13 @@
         totalItems = filteredCatalogItems.Count;
         uniqueCategories = filteredCatalogItems.Select(c => c.Category).Distinct().Count();
         materialsWithManufacturer = filteredCatalogItems.Count(c => !string.IsNullOrEmpty(c.ManufacturerName));
+        totalUsage = filteredCatalogItems.Sum(c => c.ProposalMaterials?.Count ?? 0);
     }
-
+    private void SelectUnitOfMeasure(string unit)
+    {
+        catalogModel.UnitOfMeasure = unit;
+        StateHasChanged();
+    }
     private void OnSearchChanged(string? value)
     {
         ApplyFilter();
@@ -323,61 +421,109 @@
     {
         catalogModel = new ProposalCatalog
         {
-            UnitOfMeasure = "шт"
+            UnitOfMeasure = "шт",
+            Price = 0
         };
         isEdit = false;
         isModalVisible = true;
+        StateHasChanged();
     }
 
-    private async void ShowEditModal(ProposalCatalog item)
+    private async Task ShowEditModal(ProposalCatalog item)
     {
-        // Загружаем с отслеживанием изменений
-        catalogModel = await CatalogService.GetById(item.ID);
-        if (catalogModel != null)
+        try
         {
-            isEdit = true;
-            isModalVisible = true;
+            var catalog = await CatalogService.GetByIdAsync(item.ID);
+            if (catalog != null)
+            {
+                catalogModel = catalog;
+                isEdit = true;
+                isModalVisible = true;
+                StateHasChanged();
+            }
+            else
+            {
+                await ShowError("Материал не найден!");
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка загрузки материала: {ex.Message}");
         }
     }
 
     private async Task SaveItem()
     {
-        if (await validations!.ValidateAll())
-        {
-            if (isEdit)
-                await CatalogService.Update(catalogModel);
-            else
-                await CatalogService.Create(catalogModel);
+        if (validations == null) return;
 
-            CloseModal();
-            await LoadCatalog();
+        try
+        {
+            isSaving = true;
+            StateHasChanged();
+
+            if (await validations.ValidateAll())
+            {
+                if (isEdit)
+                {
+                    await CatalogService.UpdateAsync(catalogModel);
+                    await ShowSuccess("Материал успешно обновлен!");
+                }
+                else
+                {
+                    await CatalogService.CreateAsync(catalogModel);
+                    await ShowSuccess("Материал успешно создан!");
+                }
+
+                CloseModal();
+                await LoadCatalog();
+            }
+        }
+        catch (Exception ex)
+        {
+            await ShowError($"Ошибка сохранения: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
         }
     }
 
     private async Task DeleteItem(int id)
     {
-        var item = catalogItems.FirstOrDefault(c => c.ID == id);
-        if (item != null && item.ProposalMaterials?.Count > 0)
+        try
         {
-            await JSRuntime.InvokeVoidAsync("alert", "Нельзя удалить материал, который используется в заявках!");
-            return;
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+                "Вы уверены, что хотите удалить этот материал из каталога?");
+            
+            if (confirmed)
+            {
+                await CatalogService.DeleteAsync(id);
+                await ShowSuccess("Материал успешно удален!");
+                await LoadCatalog();
+            }
         }
-
-        if (await JSRuntime.InvokeAsync<bool>("confirm", "Вы уверены, что хотите удалить этот материал из каталога?"))
+        catch (Exception ex)
         {
-            await CatalogService.Delete(id);
-            await LoadCatalog();
+            await ShowError($"Ошибка удаления: {ex.Message}");
         }
     }
 
     private void CloseModal()
     {
         isModalVisible = false;
+        isSaving = false;
         validations?.ClearAll();
+        StateHasChanged();
     }
 
-    private void ViewCatalogItem(ProposalCatalog item)
+    private async Task ShowSuccess(string message)
     {
-        ShowEditModal(item);
+        await JSRuntime.InvokeVoidAsync("alert", $"✅ {message}");
+    }
+
+    private async Task ShowError(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("alert", $"❌ {message}");
     }
 }

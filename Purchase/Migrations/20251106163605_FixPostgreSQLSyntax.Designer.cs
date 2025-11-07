@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Purchase.Migrations
 {
     [DbContext(typeof(PurchaseContext))]
-    partial class PurchaseContextModelSnapshot : ModelSnapshot
+    [Migration("20251106163605_FixPostgreSQLSyntax")]
+    partial class FixPostgreSQLSyntax
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,15 +41,17 @@ namespace Purchase.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<string>("Code")
+                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
                     b.Property<string>("Comment")
+                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int>("EstimatedPrice")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("EstimatedPrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("ManufacturerName")
                         .HasMaxLength(150)
@@ -64,13 +69,13 @@ namespace Purchase.Migrations
                     b.Property<int>("ProposalId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,3)");
 
                     b.Property<string>("StatusM")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("UnitOfMeasure")
                         .HasMaxLength(20)
@@ -160,8 +165,8 @@ namespace Purchase.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int>("Price")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UnitOfMeasure")
                         .HasMaxLength(20)

@@ -9,44 +9,59 @@ public class ProposalMaterial
     [Display(Name = "#")]
     public int ID { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "Название материала обязательно")]
+    [MaxLength(200)]
     public string? NameMaterial { get; set; }
 
-    [Required]
+    [Required(ErrorMessage = "Категория обязательна")]
+    [MaxLength(100)]
     public string? CategoryMaterial { get; set; }
 
-    [MaxLength(10)]
-    [Required]
+    [MaxLength(50)]
     public string? Code { get; set; }
 
+    [Required(ErrorMessage = "Количество обязательно")]
+    [Range(1, int.MaxValue, ErrorMessage = "Количество должно быть больше 0")]
     public int Quantity { get; set; }
 
-    [Required]
+    [MaxLength(500)]
     public string? Comment { get; set; }
 
-    [Required]
-    public string? StatusM { get; set; }
-
-    // Новые поля
-    [MaxLength(50)]
-    public string? ManufacturerPartNumber { get; set; }
+    public MaterialStatus StatusM { get; set; } = MaterialStatus.New;
 
     [MaxLength(100)]
+    public string? ManufacturerPartNumber { get; set; }
+
+    [MaxLength(150)]
     public string? ManufacturerName { get; set; }
 
     [MaxLength(20)]
     public string? UnitOfMeasure { get; set; }
 
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal EstimatedPrice { get; set; }
+    [Range(0, int.MaxValue, ErrorMessage = "Цена не может быть отрицательной")] 
+    public int EstimatedPrice { get; set; }
 
-    [Column(TypeName = "decimal(18,2)")]
-    public decimal TotalPrice => Quantity * EstimatedPrice;
+    [NotMapped]
+    public int TotalPrice => Quantity * EstimatedPrice; 
 
-    // Связь с Proposal
+    public void FillFromCatalog(ProposalCatalog catalog)
+    {
+        if (catalog != null)
+        {
+            NameMaterial = catalog.Material;
+            CategoryMaterial = catalog.Category;
+            ManufacturerPartNumber = catalog.ManufacturerPartNumber;
+            ManufacturerName = catalog.ManufacturerName;
+            UnitOfMeasure = catalog.UnitOfMeasure;
+            EstimatedPrice = catalog.Price;
+
+            Code = catalog.ManufacturerPartNumber ?? $"CAT-{catalog.ID}";
+        }
+    }
+
     public int ProposalId { get; set; }
-    public Proposal Proposal { get; set; } = null!;
+    public virtual Proposal Proposal { get; set; } = null!;
 
     public int? CatalogId { get; set; }
-    public ProposalCatalog? Catalog { get; set; }
+    public virtual ProposalCatalog? Catalog { get; set; }
 }

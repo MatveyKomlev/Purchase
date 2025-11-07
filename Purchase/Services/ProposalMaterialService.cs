@@ -2,7 +2,6 @@
 using Purchase.Data;
 
 namespace Purchase.Services;
-
 public class ProposalMaterialService : IProposalMaterialService
 {
     private readonly IDbContextFactory<PurchaseContext> _contextFactory;
@@ -17,96 +16,90 @@ public class ProposalMaterialService : IProposalMaterialService
         return await _contextFactory.CreateDbContextAsync();
     }
 
-    public async Task<List<ProposalMaterial>> GetAll()
+    public async Task<List<ProposalMaterial>> GetAllAsync()
     {
         await using var context = await CreateDbContextAsync();
         return await context.ProposalMaterials
             .Include(pm => pm.Proposal)
             .Include(pm => pm.Catalog)
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    public async Task<List<ProposalMaterial>> GetByProposalId(int proposalId)
+    public async Task<List<ProposalMaterial>> GetByProposalIdAsync(int proposalId)
     {
+        if (proposalId <= 0) return new List<ProposalMaterial>();
+
         await using var context = await CreateDbContextAsync();
         return await context.ProposalMaterials
-            .Where(p => p.ProposalId == proposalId)
+            .Where(pm => pm.ProposalId == proposalId)
             .Include(pm => pm.Catalog)
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    public async Task<ProposalMaterial?> GetById(int id)
+    public async Task<ProposalMaterial?> GetByIdAsync(int id)
     {
+        if (id <= 0) return null;
+
         await using var context = await CreateDbContextAsync();
         return await context.ProposalMaterials
-            .AsTracking()
             .Include(pm => pm.Proposal)
             .Include(pm => pm.Catalog)
             .FirstOrDefaultAsync(pm => pm.ID == id);
     }
 
-    public async Task Create(ProposalMaterial item)
+    public async Task CreateAsync(ProposalMaterial item)
     {
-        try
+        if (item == null) throw new ArgumentNullException(nameof(item));
+
+                if (string.IsNullOrWhiteSpace(item.NameMaterial))
+            throw new ArgumentException("Название материала обязательно");
+
+        await using var context = await CreateDbContextAsync();
+
+        // Автозаполнение из каталога если указан CatalogId
+        if (item.CatalogId.HasValue && item.CatalogId.Value > 0)
         {
-            if (string.IsNullOrWhiteSpace(item.NameMaterial) || item.Quantity <= 0)
-                return;
+            var catalog = await context.ProposalCatalogs
+                .FirstOrDefaultAsync(pc => pc.ID == item.CatalogId.Value);
 
-            await using var context = await CreateDbContextAsync();
-
-            // Если указан CatalogId - подтягиваем данные из каталога
-            if (item.CatalogId.HasValue)
+            if (catalog != null)
             {
-                var catalog = await context.ProposalCatalogs
-                    .FirstOrDefaultAsync(pc => pc.ID == item.CatalogId.Value);
+                item.FillFromCatalog(catalog);
 
-                if (catalog != null)
+                // Если материал из каталога - автоматически ставим статус "Есть в базе"
+                if (item.StatusM == MaterialStatus.New)
                 {
-                    // Автозаполнение полей из каталога
-                    item.ManufacturerPartNumber ??= catalog.ManufacturerPartNumber;
-                    item.ManufacturerName ??= catalog.ManufacturerName;
-                    item.UnitOfMeasure ??= catalog.UnitOfMeasure;
+                    item.StatusM = MaterialStatus.InCatalog;
                 }
             }
-
-            await context.ProposalMaterials.AddAsync(item);
-            await context.SaveChangesAsync();
         }
-        catch (Exception ex)
-        {
-            // Логируем ошибку
-            Console.WriteLine($"Ошибка при создании материала: {ex.Message}");
-            throw; // Перебрасываем исключение дальше
-        }
-    }
 
-    public async Task Update(ProposalMaterial updated)
-    {
-        await using var context = await CreateDbContextAsync();
-        var existing = await context.ProposalMaterials.AsTracking()
-            .FirstOrDefaultAsync(x => x.ID == updated.ID);
-
-        if (existing == null)
-            return;
-
-        // Обновляем все поля
-        existing.NameMaterial = updated.NameMaterial;
-        existing.CategoryMaterial = updated.CategoryMaterial;
-        existing.Code = updated.Code;
-        existing.Quantity = updated.Quantity;
-        existing.Comment = updated.Comment;
-        existing.StatusM = updated.StatusM;
-        existing.ManufacturerPartNumber = updated.ManufacturerPartNumber;
-        existing.ManufacturerName = updated.ManufacturerName;
-        existing.UnitOfMeasure = updated.UnitOfMeasure;
-        existing.EstimatedPrice = updated.EstimatedPrice;
-        existing.CatalogId = updated.CatalogId;
-
+        await context.ProposalMaterials.AddAsync(item);
         await context.SaveChangesAsync();
     }
 
-    public async Task Delete(int id)
+    public async Task UpdateAsync(ProposalMaterial updated)
     {
+        if (updated == null) throw new ArgumentNullException(nameof(updated));
+
+        await using var context = await CreateDbContextAsync();
+
+        // Обновляем статус если материал связан с каталогом
+        if (updated.CatalogId.HasValue && updated.StatusM == MaterialStatus.New)
+        {
+            updated.StatusM = MaterialStatus.InCatalog;
+        }
+
+        context.ProposalMaterials.Update(updated);
+        await context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        if (id <= 0) return;
+
         await using var context = await CreateDbContextAsync();
         var item = await context.ProposalMaterials.FindAsync(id);
 
@@ -117,9 +110,11 @@ public class ProposalMaterialService : IProposalMaterialService
         }
     }
 
-    // Новый метод для автозаполнения из каталога
-    public async Task<ProposalMaterial?> CreateFromCatalog(int catalogId, int proposalId, int quantity, string comment)
+    public async Task<ProposalMaterial?> CreateFromCatalogAsync(int catalogId, int proposalId, int quantity, string comment) // ✅ int
     {
+        if (catalogId <= 0 || proposalId <= 0 || quantity <= 0)
+            return null;
+
         await using var context = await CreateDbContextAsync();
         var catalog = await context.ProposalCatalogs.FindAsync(catalogId);
 
@@ -130,31 +125,34 @@ public class ProposalMaterialService : IProposalMaterialService
         {
             ProposalId = proposalId,
             CatalogId = catalogId,
-            NameMaterial = catalog.Material,
-            CategoryMaterial = catalog.Category,
-            ManufacturerPartNumber = catalog.ManufacturerPartNumber,
-            ManufacturerName = catalog.ManufacturerName,
-            UnitOfMeasure = catalog.UnitOfMeasure,
-            Quantity = quantity,
+            Quantity = quantity, // ✅ int
             Comment = comment,
-            StatusM = "Новый",
-            Code = "AUTO" // или генерировать код
+            StatusM = MaterialStatus.InCatalog
         };
+
+        material.FillFromCatalog(catalog);
 
         await context.ProposalMaterials.AddAsync(material);
         await context.SaveChangesAsync();
 
         return material;
     }
+
+    public async Task<bool> ProposalExistsAsync(int proposalId)
+    {
+        await using var context = await CreateDbContextAsync();
+        return await context.Proposals.AnyAsync(p => p.ID == proposalId);
+    }
 }
 
 public interface IProposalMaterialService
 {
-    Task<List<ProposalMaterial>> GetAll();
-    Task<List<ProposalMaterial>> GetByProposalId(int proposalId);
-    Task<ProposalMaterial?> GetById(int id);
-    Task Create(ProposalMaterial item);
-    Task Update(ProposalMaterial item);
-    Task Delete(int id);
-    Task<ProposalMaterial?> CreateFromCatalog(int catalogId, int proposalId, int quantity, string comment);
+    Task<List<ProposalMaterial>> GetAllAsync();
+    Task<List<ProposalMaterial>> GetByProposalIdAsync(int proposalId);
+    Task<ProposalMaterial?> GetByIdAsync(int id);
+    Task CreateAsync(ProposalMaterial item);
+    Task UpdateAsync(ProposalMaterial item);
+    Task DeleteAsync(int id);
+    Task<ProposalMaterial?> CreateFromCatalogAsync(int catalogId, int proposalId, int quantity, string comment); // ✅ int
+    Task<bool> ProposalExistsAsync(int proposalId);
 }
