@@ -6,6 +6,7 @@
 @using Blazorise.Icons
 @using Microsoft.JSInterop
 @inject IProposalService PurchaseService
+@inject SimpleAuthService AuthService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
 
@@ -31,14 +32,16 @@
         @if (isLoading)
         {
             <div class="text-center p-4">
-                <Spinner Color="Color.Primary" />
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
                 <span class="ms-2">Загрузка заявок...</span>
             </div>
         }
         else if (!proposals.Any())
         {
             <div class="text-center p-4">
-                <Icon Name="IconName.Inbox" Size="IconSize.ExtraLarge" Class="text-muted mb-3" />
+                <div class="text-muted mb-3" style="font-size: 3rem;">📋</div>
                 <h5>Заявки не найдены</h5>
                 <p class="text-muted">Создайте первую заявку на закупку</p>
                 <Button Color="Color.Primary" Clicked="@ShowCreateModal">Создать заявку</Button>
@@ -57,14 +60,12 @@
                       Class="table-striped">
 
                 <DataGridColumns>
-                    <!-- ID -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.ID)" 
                                     Caption="ID" 
                                     Sortable="true"
                                     Width="80px" />
 
-                    <!-- Номер заявки -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.Number)" 
                                     Caption="Номер заявки" 
@@ -75,7 +76,6 @@
                         </DisplayTemplate>
                     </DataGridColumn>
 
-                    <!-- Дата создания -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.DateCreation)" 
                                     Caption="Дата создания" 
@@ -86,21 +86,18 @@
                         </DisplayTemplate>
                     </DataGridColumn>
 
-                    <!-- Автор -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.Author)" 
                                     Caption="Автор" 
                                     Sortable="true"
                                     Filterable="true" />
 
-                    <!-- Отдел -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.Department)" 
                                     Caption="Отдел" 
                                     Sortable="true"
                                     Filterable="true" />
 
-                    <!-- Приоритет -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.Priority)" 
                                     Caption="Приоритет" 
@@ -114,7 +111,6 @@
                         </DisplayTemplate>
                     </DataGridColumn>
 
-                    <!-- Статус -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.Status)" 
                                     Caption="Статус" 
@@ -128,7 +124,6 @@
                         </DisplayTemplate>
                     </DataGridColumn>
 
-                    <!-- Срок поставки -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.Deadline)" 
                                     Caption="Срок поставки" 
@@ -152,7 +147,6 @@
                         </DisplayTemplate>
                     </DataGridColumn>
 
-                    <!-- Количество позиций -->
                     <DataGridColumn TItem="Proposal" 
                                     Field="@nameof(Proposal.PositionsCount)" 
                                     Caption="Позиций" 
@@ -166,7 +160,6 @@
                         </DisplayTemplate>
                     </DataGridColumn>
 
-                    <!-- Действия -->
                     <DataGridColumn TextAlignment="TextAlignment.Center" 
                                     Filterable="false" 
                                     Sortable="false" 
@@ -177,8 +170,7 @@
                                 var proposal = (Proposal)context;
                                 var canEdit = proposal.Status != ErpStatus.Approved;
                             }
-                            <ButtonGroup Size="Size.Small">
-                                <!-- Кнопка материалов -->
+                            <div class="btn-group btn-group-sm">
                                 <Button Color="Color.Success" 
                                         Size="Size.Small"
                                         Clicked="@(async () => await ViewProposalMaterials(proposal.ID))"
@@ -186,7 +178,6 @@
                                     📦
                                 </Button>
                         
-                                <!-- Кнопка просмотра -->
                                 <Button Color="Color.Info" 
                                         Size="Size.Small"
                                         Clicked="@(async () => await ViewProposal(proposal.ID))"
@@ -194,7 +185,6 @@
                                     👁️
                                 </Button>
                         
-                                <!-- Кнопка редактирования -->
                                 @if (canEdit)
                                 {
                                     <Button Color="Color.Warning"
@@ -204,7 +194,6 @@
                                         ✏️
                                     </Button>
                             
-                                    <!-- Кнопка удаления -->
                                     <Button Color="Color.Danger"
                                             Size="Size.Small"
                                             Clicked="@(async () => await DeleteProposal(proposal.ID))"
@@ -212,7 +201,7 @@
                                         🗑️
                                     </Button>
                                 }
-                            </ButtonGroup>
+                            </div>
                         </DisplayTemplate>
                     </DataGridColumn>
                 </DataGridColumns>
@@ -226,11 +215,10 @@
     <ModalContent>
         <ModalHeader>
             <ModalTitle>@(isEdit ? "Редактировать заявку" : "Создать заявку")</ModalTitle>
-            <Button CloseButton Clicked="@CloseModal" />
+            <Button Close Clicked="@CloseModal" />
         </ModalHeader>
         <ModalBody>
             <Validations @ref="validations" Model="@proposalModel" ValidateOnLoad="false">
-                <!-- Номер заявки -->
                 <Field>
                     <FieldLabel>Номер заявки *</FieldLabel>
                     <TextEdit @bind-Text="@proposalModel.Number" 
@@ -242,7 +230,6 @@
                     </TextEdit>
                 </Field>
 
-                <!-- Автор -->
                 <Field>
                     <FieldLabel>Автор *</FieldLabel>
                     <TextEdit @bind-Text="@proposalModel.Author" 
@@ -253,7 +240,6 @@
                     </TextEdit>
                 </Field>
 
-                <!-- Отдел -->
                 <Field>
                     <FieldLabel>Отдел *</FieldLabel>
                     <TextEdit @bind-Text="@proposalModel.Department" 
@@ -265,7 +251,6 @@
                 </Field>
 
                 <div class="row">
-                    <!-- Приоритет -->
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Приоритет *</FieldLabel>
@@ -278,7 +263,6 @@
                         </Field>
                     </div>
 
-                    <!-- Статус -->
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Статус *</FieldLabel>
@@ -292,21 +276,19 @@
                     </div>
                 </div>
 
-                <!-- Срок поставки -->
                 <Field>
                     <FieldLabel>Срок поставки</FieldLabel>
                     <DateEdit @bind-Date="@proposalModel.Deadline" 
                              Placeholder="Выберите дату..." />
                 </Field>
 
-                <!-- Обоснование закупки -->
                 <Field>
                     <FieldLabel>Обоснование закупки</FieldLabel>
                     <TextEdit @bind-Text="@proposalModel.Explanation" 
                              Placeholder="Опишите для чего нужна эта закупка..." 
                              Multiline="true" 
                              Rows="4" />
-                    <HelpText>Максимум 500 символов</HelpText>
+                    <small class="form-text text-muted">Максимум 500 символов</small>
                 </Field>
             </Validations>
         </ModalBody>
@@ -316,7 +298,9 @@
                     Disabled="@isSaving">
                 @if (isSaving)
                 {
-                    <Spinner Size="SpinnerSize.Small" />
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
                 }
                 @(isEdit ? "Обновить" : "Создать")
             </Button>
@@ -330,34 +314,47 @@
 </Modal>
 
 @code {
-    // Данные
     private List<Proposal> proposals = new();
     private Proposal proposalModel = new();
-    
-    // Состояние UI
     private bool isLoading = true;
     private bool isSaving = false;
     private bool isModalVisible = false;
     private bool isEdit = false;
-    
-    // Ссылки на компоненты
     private Validations? validations;
     private DataGrid<Proposal>? dataGrid;
+    private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            var isAuth = await AuthService.IsAuthenticatedAsync();
+            if (!isAuth)
+            {
+                NavigationManager.NavigateTo("/simple-login");
+                return;
+            }
+
             await LoadProposals();
         }
         catch (Exception ex)
         {
-            await ShowError($"Ошибка загрузки: {ex.Message}");
+            errorMessage = $"Ошибка загрузки: {ex.Message}";
+            Console.WriteLine($"❌ Ошибка загрузки: {ex.Message}");
         }
         finally
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(errorMessage))
+        {
+            await ShowError(errorMessage);
+            errorMessage = "";
         }
     }
 
@@ -380,7 +377,6 @@
             isEdit = false;
             isModalVisible = true;
             
-            // Генерируем номер асинхронно
             _ = GenerateProposalNumberAsync();
         }
         catch (Exception ex)
@@ -482,14 +478,16 @@
         }
     }
 
-    private async Task ViewProposal(int id)
+    private Task ViewProposal(int id)
     {
-        await Task.Run(() => NavigationManager.NavigateTo($"/proposal-view/{id}"));
+        NavigationManager.NavigateTo($"/proposal-view/{id}");
+        return Task.CompletedTask;
     }
 
-    private async Task ViewProposalMaterials(int proposalId)
+    private Task ViewProposalMaterials(int proposalId)
     {
-        await Task.Run(() => NavigationManager.NavigateTo($"/proposal-material/{proposalId}"));
+        NavigationManager.NavigateTo($"/proposal-material/{proposalId}");
+        return Task.CompletedTask;
     }
 
     private void CloseModal()
@@ -537,11 +535,11 @@
 
     private async Task ShowSuccess(string message)
     {
-        await JSRuntime.InvokeVoidAsync("alert", message);
+        await JSRuntime.InvokeVoidAsync("alert", $"✅ {message}");
     }
 
     private async Task ShowError(string message)
     {
-        await JSRuntime.InvokeVoidAsync("alert", $"Ошибка: {message}");
+        await JSRuntime.InvokeVoidAsync("alert", $"❌ {message}");
     }
 }

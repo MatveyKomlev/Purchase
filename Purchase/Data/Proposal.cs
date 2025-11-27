@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Reflection;
 
 namespace Purchase.Data
 {
@@ -19,10 +18,10 @@ namespace Purchase.Data
         [Required]
         public DateTime DateCreation { get; set; }
 
-        [MaxLength(30)]
+        [MaxLength(100)]
         public string? Author { get; set; }
 
-        [MaxLength(20)]
+        [MaxLength(100)]
         public string? Department { get; set; }
 
         [Required(ErrorMessage = "Статус обязателен")]
@@ -30,7 +29,7 @@ namespace Purchase.Data
 
         public DateTime? Deadline { get; set; }
 
-        [MaxLength(500)]
+        [MaxLength(1000)]
         public string? Explanation { get; set; }
 
         [Required]
@@ -39,9 +38,6 @@ namespace Purchase.Data
         [NotMapped]
         public int PositionsCount => Materials?.Count ?? 0;
 
-        // Навигационные свойства
         public virtual List<ProposalMaterial> Materials { get; set; } = new();
     }
 }
-
-

@@ -1,0 +1,47 @@
+﻿@using Purchase.Services
+@inject SimpleAuthService AuthService
+
+@if (HasPermission)
+{
+    @ChildContent
+}
+else if (ShowFallback && FallbackContent is not null)
+{
+    @FallbackContent
+}
+else
+{
+    <div class="permission-denied alert alert-warning mt-3">
+        <strong>Недостаточно прав</strong>
+        <p class="mb-0">Для выполнения этого действия требуются дополнительные права доступа.</p>
+    </div>
+}
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? FallbackContent { get; set; }
+    [Parameter] public bool RequiredAdmin { get; set; } = false;
+    [Parameter] public bool ShowFallback { get; set; } = false;
+    [Parameter] public string RequiredPermission { get; set; } = string.Empty;
+
+    private bool HasPermission { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // ВРЕМЕННО УПРОЩАЕМ - ВСЕ АВТОРИЗОВАННЫЕ ПОЛЬЗОВАТЕЛИ ИМЕЮТ ДОСТУП
+        var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+
+        if (!string.IsNullOrEmpty(RequiredPermission) || RequiredAdmin)
+        {
+            // Для требований прав или админки - пока разрешаем всем авторизованным
+            HasPermission = isAuthenticated;
+        }
+        else
+        {
+            // Просто проверяем авторизацию
+            HasPermission = isAuthenticated;
+        }
+
+        await Task.Delay(1); // Добавляем await для асинхронности
+    }
+}

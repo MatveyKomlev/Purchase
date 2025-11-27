@@ -3,7 +3,7 @@ using Purchase.Data;
 
 namespace Purchase.Services;
 
-public class ProposalCatalogService : IProposalCatalogService 
+public class ProposalCatalogService : IProposalCatalogService
 {
     private readonly IDbContextFactory<PurchaseContext> _contextFactory;
 
@@ -22,11 +22,11 @@ public class ProposalCatalogService : IProposalCatalogService
         await using var context = await CreateDbContextAsync();
         return await context.ProposalCatalogs
             .Include(pc => pc.ProposalMaterials)
-            .AsNoTracking() 
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    public async Task<ProposalCatalog?> GetByIdAsync(int id) 
+    public async Task<ProposalCatalog?> GetByIdAsync(int id)
     {
         await using var context = await CreateDbContextAsync();
         return await context.ProposalCatalogs
@@ -61,7 +61,7 @@ public class ProposalCatalogService : IProposalCatalogService
         }
     }
 
-    public async Task UpdateAsync(ProposalCatalog updated) 
+    public async Task UpdateAsync(ProposalCatalog updated)
     {
         if (updated == null) throw new ArgumentNullException(nameof(updated));
 
@@ -80,7 +80,8 @@ public class ProposalCatalogService : IProposalCatalogService
 
         if (item == null) return;
 
-        if (item.ProposalMaterials.Any())
+        // ИСПРАВЛЕНИЕ: Проверка на null для ProposalMaterials
+        if (item.ProposalMaterials?.Any() == true)
         {
             throw new InvalidOperationException("Нельзя удалить материал из каталога, так как на него ссылаются в заявках");
         }
@@ -89,37 +90,44 @@ public class ProposalCatalogService : IProposalCatalogService
         await context.SaveChangesAsync();
     }
 
-    public async Task<List<ProposalCatalog>> SearchAsync(string searchTerm) 
+    public async Task<List<ProposalCatalog>> SearchAsync(string searchTerm)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
             return await GetAllAsync();
 
         await using var context = await CreateDbContextAsync();
-        return await context.ProposalCatalogs
-            .Where(pc => pc.Material.Contains(searchTerm) ||
-                        (pc.ManufacturerPartNumber != null && pc.ManufacturerPartNumber.Contains(searchTerm)) ||
-                        pc.Category.Contains(searchTerm))
+
+             return await context.ProposalCatalogs
+            .Where(pc =>
+             (pc.Material != null && pc.Material.Contains(searchTerm)) ||        
+            (pc.ManufacturerPartNumber != null && pc.ManufacturerPartNumber.Contains(searchTerm)) ||
+            (pc.Category != null && pc.Category.Contains(searchTerm)))          
             .AsNoTracking()
             .ToListAsync();
     }
+
     public async Task<List<string>> GetCategoriesAsync()
     {
         await using var context = await CreateDbContextAsync();
-        return await context.ProposalCatalogs
-            .Select(pc => pc.Category)
+
+        var categories = await context.ProposalCatalogs
+            .Where(pc => !string.IsNullOrEmpty(pc.Category)) // Фильтруем null/пустые категории
+            .Select(pc => pc.Category!)
             .Distinct()
             .OrderBy(c => c)
             .ToListAsync();
+
+        return categories ?? new List<string>(); // Гарантируем не-null результат
     }
 }
 
 public interface IProposalCatalogService
 {
-    Task<List<ProposalCatalog>> GetAllAsync(); 
-    Task<ProposalCatalog?> GetByIdAsync(int id); 
+    Task<List<ProposalCatalog>> GetAllAsync();
+    Task<ProposalCatalog?> GetByIdAsync(int id);
     Task CreateAsync(ProposalCatalog catalog);
     Task UpdateAsync(ProposalCatalog catalog);
-    Task DeleteAsync(int id); 
-    Task<List<ProposalCatalog>> SearchAsync(string searchTerm); 
-    Task<List<string>> GetCategoriesAsync(); 
+    Task DeleteAsync(int id);
+    Task<List<ProposalCatalog>> SearchAsync(string searchTerm);
+    Task<List<string>> GetCategoriesAsync();
 }

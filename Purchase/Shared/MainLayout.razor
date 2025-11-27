@@ -1,4 +1,7 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthStateProvider
+@inject SimpleAuthService AuthService
+@inject NavigationManager Navigation
 
 <PageTitle>Purchase</PageTitle>
 
@@ -8,8 +11,22 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+        <div class="top-row px-4" style="background: #f8f9fa; padding: 10px;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+
+                @if (isAuthenticated)
+                {
+                    <div>
+                        <span>Привет, @username! </span>
+                        <button @onclick="Logout" style="margin-left: 10px; padding: 5px 10px;">Выйти</button>
+                    </div>
+                }
+                else
+                {
+                    <a href="/simple-login" class="btn btn-primary">Войти</a>
+                }
+            </div>
         </div>
 
         <article class="content px-4">
@@ -17,3 +34,65 @@
         </article>
     </main>
 </div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string username = "";
+    private bool isInitialized = false;
+
+    protected override Task OnInitializedAsync()
+    {
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !isInitialized)
+        {
+            await CheckAuth();
+            isInitialized = true;
+            StateHasChanged();
+            await Task.Delay(1); // Добавляем await для асинхронности
+        }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await CheckAuth();
+        StateHasChanged();
+        await Task.Delay(1); // Добавляем await для асинхронности
+    }
+
+    private async Task CheckAuth()
+    {
+        try
+        {
+            isAuthenticated = await AuthService.IsAuthenticatedAsync();
+            username = await AuthService.GetUsernameAsync();
+            await Task.Delay(1); // Добавляем await для асинхронности
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Auth check error: {ex.Message}");
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        ((SimpleAuthStateProvider)AuthStateProvider).NotifyAuthenticationStateChanged();
+        Navigation.NavigateTo("/", true);
+        await Task.Delay(1); // Добавляем await для асинхронности
+    }
+
+    private Color GetRoleColor()
+    {
+        return isAuthenticated ? Color.Danger : Color.Secondary;
+    }
+
+    private string GetRoleDisplayName()
+    {
+        return isAuthenticated ? "Админ" : "Гость";
+    }
+}

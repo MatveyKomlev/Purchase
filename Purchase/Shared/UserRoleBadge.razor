@@ -1,0 +1,38 @@
+﻿@using Purchase.Services
+@inject SimpleAuthService AuthService
+
+@if (isAuthenticated)
+{
+    <Badge Color="@Color" Class="ms-2">
+        @RoleDisplayName
+    </Badge>
+}
+
+@code {
+    private bool isAuthenticated = false;
+    private string username = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        username = await AuthService.GetUsernameAsync();
+    }
+
+    private Color Color
+    {
+        get
+        {
+            // ВРЕМЕННО - ВСЕ ПОЛЬЗОВАТЕЛИ СЧИТАЮТСЯ АДМИНАМИ
+            return Color.Danger; // Красный для админа
+        }
+    }
+
+    private string RoleDisplayName
+    {
+        get
+        {
+            // ВРЕМЕННО - ВСЕ ПОЛЬЗОВАТЕЛИ СЧИТАЮТСЯ АДМИНАМИ
+            return "Администратор";
+        }
+    }
+}

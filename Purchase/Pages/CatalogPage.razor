@@ -5,7 +5,9 @@
 @using Blazorise
 @using Microsoft.JSInterop
 @inject IProposalCatalogService CatalogService
+@inject SimpleAuthService AuthService
 @inject IJSRuntime JSRuntime
+@inject NavigationManager NavigationManager
 
 <PageTitle>Справочник материалов</PageTitle>
 
@@ -18,8 +20,8 @@
             <BarItem>
                 <Field>
                     <FieldLabel>Поиск:</FieldLabel>
-                    <TextEdit @bind-Text="searchTerm" Placeholder="Поиск по названию или артикулу..." 
-                             Changed="@OnSearchChanged" />
+                    <TextEdit @bind-Text="searchTerm" Placeholder="Поиск по названию или артикулу..."
+                              Changed="@OnSearchChanged" />
                 </Field>
             </BarItem>
         </BarStart>
@@ -33,7 +35,6 @@
     </BarMenu>
 </Bar>
 
-<!-- Статистика -->
 <Card Class="mb-3">
     <CardBody>
         <div class="row text-center">
@@ -61,7 +62,9 @@
 {
     <Card Class="mt-3">
         <CardBody Class="text-center">
-            <Spinner Color="Color.Primary" />
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
             <span class="ms-2">Загрузка каталога...</span>
         </CardBody>
     </Card>
@@ -70,7 +73,7 @@ else if (!filteredCatalogItems.Any())
 {
     <Card Class="mt-3">
         <CardBody Class="text-center">
-            <Icon Name="IconName.Inbox" Size="IconSize.ExtraLarge" Class="text-muted mb-3" />
+            <div class="text-muted mb-3" style="font-size: 3rem;">📦</div>
             <h5>Материалы не найдены</h5>
             <p class="text-muted">@(string.IsNullOrEmpty(searchTerm) ? "Добавьте первый материал в каталог" : "По вашему запросу ничего не найдено")</p>
             @if (string.IsNullOrEmpty(searchTerm))
@@ -96,7 +99,7 @@ else
                       Class="table-striped">
                 <DataGridColumns>
                     <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.ID)" Caption="ID" Sortable="true" Width="80px" />
-                    
+
                     <DataGridColumn TItem="ProposalCatalog" Field="@nameof(ProposalCatalog.Material)" Caption="Материал" Sortable="true" Filterable="true">
                         <DisplayTemplate>
                             <div>
@@ -159,11 +162,11 @@ else
                             }
                             @if (usageCount > 0)
                             {
-                                <Tooltip Text="@($"Используется в {usageCount} заявках")">
+                                <span title="@($"Используется в {usageCount} заявках")">
                                     <Badge Color="Color.Success">
                                         @usageCount
                                     </Badge>
-                                </Tooltip>
+                                </span>
                             }
                             else
                             {
@@ -178,14 +181,14 @@ else
                                 var catalogItem = (ProposalCatalog)context;
                                 var canDelete = (catalogItem.ProposalMaterials?.Count ?? 0) == 0;
                             }
-                            <ButtonGroup Size="Size.Small">
+                            <div class="btn-group btn-group-sm">
                                 <Button Color="Color.Warning"
                                         Size="Size.Small"
                                         Clicked="@(async () => await ShowEditModal(catalogItem))"
                                         Title="Редактировать">
                                     ✏️
                                 </Button>
-                                
+
                                 <Button Color="Color.Danger"
                                         Size="Size.Small"
                                         Hidden="@(!canDelete)"
@@ -201,7 +204,7 @@ else
                                         Disabled="true">
                                     ⚠️
                                 </Button>
-                            </ButtonGroup>
+                            </div>
                         </DisplayTemplate>
                     </DataGridColumn>
                 </DataGridColumns>
@@ -210,22 +213,20 @@ else
     </Card>
 }
 
-<!-- Модальное окно создания/редактирования -->
 <Modal @bind-Visible="isModalVisible" Size="ModalSize.Large">
     <ModalContent>
         <ModalHeader>
             <ModalTitle>@(isEdit ? "Редактировать материал" : "Добавить материал")</ModalTitle>
-            <Button CloseButton Clicked="@(() => CloseModal())" />
+            <Button Close Clicked="@(() => CloseModal())" />
         </ModalHeader>
         <ModalBody>
             <Validations @ref="validations" Model="@catalogModel" ValidateOnLoad="false">
-                <!-- Основная информация -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Материал *</FieldLabel>
-                            <TextEdit @bind-Text="@catalogModel.Material" 
-                                     Placeholder="Название материала">
+                            <TextEdit @bind-Text="@catalogModel.Material"
+                                      Placeholder="Название материала">
                                 <Feedback>
                                     <ValidationError />
                                 </Feedback>
@@ -235,8 +236,8 @@ else
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Категория *</FieldLabel>
-                            <TextEdit @bind-Text="@catalogModel.Category" 
-                                     Placeholder="Категория материала">
+                            <TextEdit @bind-Text="@catalogModel.Category"
+                                      Placeholder="Категория материала">
                                 <Feedback>
                                     <ValidationError />
                                 </Feedback>
@@ -245,44 +246,43 @@ else
                     </div>
                 </div>
 
-                <!-- Производитель -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Производитель</FieldLabel>
-                            <TextEdit @bind-Text="@catalogModel.ManufacturerName" 
-                                     Placeholder="Название производителя" />
+                            <TextEdit @bind-Text="@catalogModel.ManufacturerName"
+                                      Placeholder="Название производителя" />
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Партномер</FieldLabel>
-                            <TextEdit @bind-Text="@catalogModel.ManufacturerPartNumber" 
-                                     Placeholder="Партномер производителя" />
+                            <TextEdit @bind-Text="@catalogModel.ManufacturerPartNumber"
+                                      Placeholder="Партномер производителя" />
                         </Field>
                     </div>
                 </div>
 
-                <!-- Единица измерения и цена -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Единица измерения</FieldLabel>
-                            <TextEdit @bind-Text="@catalogModel.UnitOfMeasure" 
-                                     Placeholder="Выберите единицу измерения">
-                                <Dropdown>
-                                    <DropdownToggle Color="Color.Secondary" Split="true" />
-                                    <DropdownMenu>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure(""))">— Выберите —</DropdownItem>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("шт"))">Штуки (шт)</DropdownItem>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("кг"))">Килограммы (кг)</DropdownItem>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("м"))">Метры (м)</DropdownItem>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("л"))">Литры (л)</DropdownItem>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("уп"))">Упаковки (уп)</DropdownItem>
-                                        <DropdownItem Clicked="@(() => SelectUnitOfMeasure("компл"))">Комплекты (компл)</DropdownItem>
-                                    </DropdownMenu>
-                                </Dropdown>
-                            </TextEdit>
+                            <div class="input-group">
+                                <TextEdit @bind-Text="@catalogModel.UnitOfMeasure"
+                                          Placeholder="Выберите единицу измерения" />
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure(""))">— Выберите —</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure("шт"))">Штуки (шт)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure("кг"))">Килограммы (кг)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure("м"))">Метры (м)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure("л"))">Литры (л)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure("уп"))">Упаковки (уп)</button></li>
+                                    <li><button class="dropdown-item" type="button" @onclick="@(() => SelectUnitOfMeasure("компл"))">Комплекты (компл)</button></li>
+                                </ul>
+                            </div>
                         </Field>
                     </div>
                     <div class="col-md-6">
@@ -299,7 +299,6 @@ else
                     </div>
                 </div>
 
-                <!-- Информация об использовании -->
                 @if (isEdit)
                 {
                     <Field>
@@ -321,16 +320,18 @@ else
             </Validations>
         </ModalBody>
         <ModalFooter>
-            <Button Color="Color.Primary" 
+            <Button Color="Color.Primary"
                     Clicked="@(async () => await SaveItem())"
                     Disabled="@isSaving">
                 @if (isSaving)
                 {
-                    <Spinner Size="SpinnerSize.Small" />
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
                 }
                 💾 @(isEdit ? "Обновить" : "Создать")
             </Button>
-            <Button Color="Color.Secondary" 
+            <Button Color="Color.Secondary"
                     Clicked="@(() => CloseModal())"
                     Disabled="@isSaving">
                 ❌ Отмена
@@ -351,26 +352,43 @@ else
     private Validations? validations;
     private DataGrid<ProposalCatalog>? dataGrid;
 
-    // Статистика
     private int totalItems = 0;
     private int uniqueCategories = 0;
     private int materialsWithManufacturer = 0;
     private int totalUsage = 0;
+    private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            var isAuth = await AuthService.IsAuthenticatedAsync();
+            if (!isAuth)
+            {
+                NavigationManager.NavigateTo("/simple-login");
+                return;
+            }
+
             await LoadCatalog();
         }
         catch (Exception ex)
         {
-            await ShowError($"Ошибка загрузки каталога: {ex.Message}");
+            errorMessage = $"Ошибка загрузки каталога: {ex.Message}";
+            Console.WriteLine($"❌ Ошибка загрузки каталога: {ex.Message}");
         }
         finally
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(errorMessage))
+        {
+            await ShowError(errorMessage);
+            errorMessage = "";
         }
     }
 
@@ -406,11 +424,13 @@ else
         materialsWithManufacturer = filteredCatalogItems.Count(c => !string.IsNullOrEmpty(c.ManufacturerName));
         totalUsage = filteredCatalogItems.Sum(c => c.ProposalMaterials?.Count ?? 0);
     }
+
     private void SelectUnitOfMeasure(string unit)
     {
         catalogModel.UnitOfMeasure = unit;
         StateHasChanged();
     }
+
     private void OnSearchChanged(string? value)
     {
         ApplyFilter();
@@ -493,9 +513,9 @@ else
     {
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
                 "Вы уверены, что хотите удалить этот материал из каталога?");
-            
+
             if (confirmed)
             {
                 await CatalogService.DeleteAsync(id);

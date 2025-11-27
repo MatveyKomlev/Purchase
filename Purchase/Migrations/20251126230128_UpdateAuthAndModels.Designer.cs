@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Purchase.Data;
@@ -11,9 +12,11 @@ using Purchase.Data;
 namespace Purchase.Migrations
 {
     [DbContext(typeof(PurchaseContext))]
-    partial class PurchaseContextModelSnapshot : ModelSnapshot
+    [Migration("20251126230128_UpdateAuthAndModels")]
+    partial class UpdateAuthAndModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -35,10 +38,10 @@ namespace Purchase.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("DateCreation")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("Deadline")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Department")
                         .HasMaxLength(100)
@@ -187,7 +190,7 @@ namespace Purchase.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
+                        .HasColumnType("timestamp without time zone")
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("Email")
@@ -206,7 +209,7 @@ namespace Purchase.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastLogin")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Purchase.Migrations
 {
     [DbContext(typeof(PurchaseContext))]
-    [Migration("20251022224713_FixEnumConversion")]
-    partial class FixEnumConversion
+    [Migration("20251112233912_AddUserTable")]
+    partial class AddUserTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,31 +38,32 @@ namespace Purchase.Migrations
 
                     b.Property<string>("CategoryMaterial")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Code")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
-                    b.Property<string>("Comment")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("EstimatedPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ManufacturerName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<string>("ManufacturerPartNumber")
+                    b.Property<string>("Code")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("EstimatedPrice")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ManufacturerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("ManufacturerPartNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("NameMaterial")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<int>("ProposalId")
                         .HasColumnType("integer");
@@ -72,7 +73,8 @@ namespace Purchase.Migrations
 
                     b.Property<string>("StatusM")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<string>("UnitOfMeasure")
                         .HasMaxLength(20)
@@ -118,14 +120,20 @@ namespace Purchase.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<long>("Priority")
-                        .HasColumnType("bigint");
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
 
-                    b.Property<long>("Status")
-                        .HasMaxLength(10)
-                        .HasColumnType("bigint");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.HasKey("ID");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
 
                     b.ToTable("Proposals");
                 });
@@ -140,19 +148,24 @@ namespace Purchase.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("ManufacturerName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("ManufacturerName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
                     b.Property<string>("ManufacturerPartNumber")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Material")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer");
 
                     b.Property<string>("UnitOfMeasure")
                         .HasMaxLength(20)
@@ -160,14 +173,74 @@ namespace Purchase.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("ManufacturerPartNumber")
+                        .IsUnique();
+
                     b.ToTable("ProposalCatalogs");
+                });
+
+            modelBuilder.Entity("Purchase.Data.User", b =>
+                {
+                    b.Property<int>("ID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("ID"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LastLogin")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("ID");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.HasIndex("Username")
+                        .IsUnique();
+
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("ProposalMaterial", b =>
                 {
                     b.HasOne("Purchase.Data.ProposalCatalog", "Catalog")
                         .WithMany("ProposalMaterials")
-                        .HasForeignKey("CatalogId");
+                        .HasForeignKey("CatalogId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("Purchase.Data.Proposal", "Proposal")
                         .WithMany("Materials")

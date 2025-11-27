@@ -8,6 +8,7 @@
 @inject IProposalMaterialService MaterialService
 @inject IProposalCatalogService CatalogService
 @inject IProposalService ProposalService
+@inject SimpleAuthService AuthService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
@@ -33,7 +34,6 @@
     </BarMenu>
 </Bar>
 
-<!-- Информация о заявке -->
 @if (proposal != null)
 {
     <Card Class="mt-3">
@@ -46,7 +46,7 @@
                     <strong>Автор:</strong> @proposal.Author
                 </div>
                 <div class="col-md-4">
-                    <strong>Статус:</strong> 
+                    <strong>Статус:</strong>
                     <Badge Color="@GetProposalStatusColor(proposal.Status)" Class="ms-1">
                         @proposal.Status.GetName()
                     </Badge>
@@ -56,7 +56,6 @@
     </Card>
 }
 
-<!-- Статистика по заявке -->
 <Card Class="mt-3">
     <CardBody>
         <div class="row text-center">
@@ -122,7 +121,7 @@ else
                     <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.NameMaterial)" Caption="Материал" Sortable="true" Filterable="true" />
                     <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.CategoryMaterial)" Caption="Категория" Sortable="true" Filterable="true" />
                     <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Code)" Caption="Код" Sortable="true" Width="120px" />
-                    
+
                     <DataGridColumn TItem="ProposalMaterial" Field="@nameof(ProposalMaterial.Quantity)" Caption="Кол-во" Sortable="true" TextAlignment="TextAlignment.Center" Width="130px">
                         <DisplayTemplate>
                             <Badge Color="Color.Info" Outline="true">
@@ -198,7 +197,6 @@ else
     </Card>
 }
 
-<!-- Модальное окно создания/редактирования позиции -->
 <Modal @bind-Visible="isModalVisible" Size="ModalSize.Large">
     <ModalContent>
         <ModalHeader>
@@ -207,7 +205,6 @@ else
         </ModalHeader>
         <ModalBody>
             <Validations @ref="validations" Model="@materialModel" ValidateOnLoad="false">
-                <!-- Выбор из каталога -->
                 <Field>
                     <FieldLabel>Выбрать из каталога (автозаполнение)</FieldLabel>
                     <Select TValue="int?" SelectedValue="@selectedCatalogId" SelectedValueChanged="@OnCatalogSelected">
@@ -222,22 +219,21 @@ else
                 </Field>
 
                 <hr />
-                
-                <!-- Основная информация -->
+
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Материал *</FieldLabel>
-                            <TextEdit @bind-Text="@materialModel.NameMaterial" 
-                                     Placeholder="Название материала" />
+                            <TextEdit @bind-Text="@materialModel.NameMaterial"
+                                      Placeholder="Название материала" />
                             <ValidationError>Название материала обязательно</ValidationError>
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Категория *</FieldLabel>
-                            <TextEdit @bind-Text="@materialModel.CategoryMaterial" 
-                                     Placeholder="Категория материала" />
+                            <TextEdit @bind-Text="@materialModel.CategoryMaterial"
+                                      Placeholder="Категория материала" />
                             <ValidationError>Категория обязательна</ValidationError>
                         </Field>
                     </div>
@@ -247,42 +243,41 @@ else
                     <div class="col-md-4">
                         <Field>
                             <FieldLabel>Код</FieldLabel>
-                            <TextEdit @bind-Text="@materialModel.Code" 
-                                     Placeholder="Внутренний код" />
+                            <TextEdit @bind-Text="@materialModel.Code"
+                                      Placeholder="Внутренний код" />
                         </Field>
                     </div>
                     <div class="col-md-4">
                         <Field>
                             <FieldLabel>Количество *</FieldLabel>
                             <NumericEdit TValue="int"
-                                        @bind-Value="@materialModel.Quantity"
-                                        Min="1" />
+                                         @bind-Value="@materialModel.Quantity"
+                                         Min="1" />
                             <ValidationError>Количество должно быть больше 0</ValidationError>
                         </Field>
                     </div>
                     <div class="col-md-4">
                         <Field>
                             <FieldLabel>Единица измерения</FieldLabel>
-                            <TextEdit @bind-Text="@materialModel.UnitOfMeasure" 
-                                     Placeholder="шт, кг, м и т.д." />
+                            <TextEdit @bind-Text="@materialModel.UnitOfMeasure"
+                                      Placeholder="шт, кг, м и т.д." />
                         </Field>
                     </div>
                 </div>
 
-                <!-- Производитель и цена -->
                 <div class="row">
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Производитель</FieldLabel>
-                            <TextEdit @bind-Text="@materialModel.ManufacturerName" 
-                                     Placeholder="Название производителя" />
+                            <TextEdit @bind-Text="@materialModel.ManufacturerName"
+                                      Placeholder="Название производителя" />
                         </Field>
                     </div>
                     <div class="col-md-6">
                         <Field>
                             <FieldLabel>Партномер</FieldLabel>
-                            <TextEdit @bind-Text="@materialModel.ManufacturerPartNumber" 
-                                     Placeholder="Партномер производителя" />
+                            <TextEdit @bind-Text="@materialModel.ManufacturerPartNumber"
+                                      Placeholder="Партномер производителя" />
                         </Field>
                     </div>
                 </div>
@@ -313,15 +308,15 @@ else
 
                 <Field>
                     <FieldLabel>Комментарий</FieldLabel>
-                    <TextEdit @bind-Text="@materialModel.Comment" 
-                             Placeholder="Дополнительная информация..." 
-                             Multiline="true" 
-                             Rows="3" />
+                    <TextEdit @bind-Text="@materialModel.Comment"
+                              Placeholder="Дополнительная информация..."
+                              Multiline="true"
+                              Rows="3" />
                 </Field>
             </Validations>
         </ModalBody>
         <ModalFooter>
-            <Button Color="Color.Primary" 
+            <Button Color="Color.Primary"
                     Clicked="SaveItem"
                     Disabled="@isSaving">
                 @if (isSaving)
@@ -332,7 +327,7 @@ else
                 }
                 💾 @(isEdit ? "Обновить" : "Создать")
             </Button>
-            <Button Color="Color.Secondary" 
+            <Button Color="Color.Secondary"
                     Clicked="CloseModal"
                     Disabled="@isSaving">
                 ❌ Отмена
@@ -358,34 +353,51 @@ else
     private Validations? validations;
     private DataGrid<ProposalMaterial>? dataGrid;
 
-    // Статистика
     private int totalPositions = 0;
     private int totalQuantity = 0;
     private int totalEstimatedPrice = 0;
     private int averagePrice = 0;
+    private string errorMessage = "";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            var isAuth = await AuthService.IsAuthenticatedAsync();
+            if (!isAuth)
+            {
+                Navigation.NavigateTo("/simple-login");
+                return;
+            }
+
             if (ProposalId > 0)
             {
                 await LoadData();
             }
             else
             {
-                await ShowError("ID заявки не указан!");
-                Navigation.NavigateTo("/proposals");
+                errorMessage = "ID заявки не указан!";
+                Console.WriteLine("❌ ID заявки не указан!");
             }
         }
         catch (Exception ex)
         {
-            await ShowError($"Ошибка инициализации: {ex.Message}");
+            errorMessage = $"Ошибка инициализации: {ex.Message}";
+            Console.WriteLine($"❌ Ошибка инициализации: {ex.Message}");
         }
         finally
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(errorMessage))
+        {
+            await ShowError(errorMessage);
+            errorMessage = "";
         }
     }
 
@@ -436,7 +448,10 @@ else
 
     private async Task LoadCatalog()
     {
-        catalogItems = await CatalogService.GetAllAsync();
+        if (catalogItems?.Any() != true)
+        {
+            catalogItems = await CatalogService.GetAllAsync();
+        }
     }
 
     private void CalculateStatistics()
@@ -531,9 +546,9 @@ else
     {
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm",
                 "Вы уверены, что хотите удалить эту позицию?");
-            
+
             if (confirmed)
             {
                 await MaterialService.DeleteAsync(id);
@@ -557,7 +572,6 @@ else
                 var catalogItem = catalogItems.FirstOrDefault(c => c.ID == catalogId.Value);
                 if (catalogItem != null)
                 {
-                    // Заполняем поля из каталога
                     materialModel.NameMaterial = catalogItem.Material;
                     materialModel.CategoryMaterial = catalogItem.Category;
                     materialModel.ManufacturerPartNumber = catalogItem.ManufacturerPartNumber;

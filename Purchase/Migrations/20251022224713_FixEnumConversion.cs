@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
-
+using Purchase.Data;
 #nullable disable
 
 namespace Purchase.Migrations

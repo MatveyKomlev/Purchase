@@ -1,46 +1,67 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
-using Purchase.Data;
-using Purchase.Services;
 using Blazorise;
 using Blazorise.Bootstrap5;
 using Blazorise.Icons.FontAwesome;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.EntityFrameworkCore;
+using Purchase.Data;
+using Purchase.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Базовая конфигурация
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
-builder.Services
-    .AddBlazorise(options => { options.Immediate = true; })
-    .AddBootstrap5Providers()
-    .AddFontAwesomeIcons();
-
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
-var DBConnectionString = builder.Configuration.GetConnectionString("PurchaseContext");
-
+// База данных
+var connectionString = builder.Configuration.GetConnectionString("PurchaseContext");
 builder.Services.AddDbContextFactory<PurchaseContext>(options =>
-    options.UseNpgsql(DBConnectionString, option => option.CommandTimeout(60))
-           .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution));
+    options.UseNpgsql(connectionString));
 
+// Сервисы приложения
 builder.Services.AddScoped<IProposalService, ProposalService>();
 builder.Services.AddScoped<IProposalCatalogService, ProposalCatalogService>();
 builder.Services.AddScoped<IProposalMaterialService, ProposalMaterialService>();
 
+// Аутентификация и авторизация
+builder.Services.AddAuthenticationCore();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<SimpleAuthService>();
+builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
+
+// Blazorise
+builder.Services
+    .AddBlazorise(options =>
+    {
+        options.Immediate = true;
+    })
+    .AddBootstrap5Providers()
+    .AddFontAwesomeIcons();
+
 var app = builder.Build();
 
-using var serviceScope = app.Services.CreateScope();
-var factory = serviceScope.ServiceProvider.GetRequiredService<IDbContextFactory<PurchaseContext>>();
+// Инициализация базы данных
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var contextFactory = services.GetRequiredService<IDbContextFactory<PurchaseContext>>();
+        using var context = contextFactory.CreateDbContext();
 
-// Создаем контекст через фабрику
-await using var DBContext = await factory.CreateDbContextAsync();
+        // Применяем миграции (если есть)
+        await context.Database.MigrateAsync();
 
-await DBContext.Database.MigrateAsync();
+        // Инициализируем начальные данные
+        SeedData.Initialize(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Ошибка при инициализации базы данных");
+    }
+}
 
-// Configure the HTTP request pipeline.
+// Базовый pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -51,9 +72,10 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
 app.Run();
-
-
