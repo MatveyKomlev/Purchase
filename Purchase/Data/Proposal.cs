@@ -19,10 +19,10 @@ namespace Purchase.Data
         public DateTime DateCreation { get; set; }
 
         [MaxLength(100)]
-        public string? Author { get; set; }
+        public string? Author { get; set; }  
 
         [MaxLength(100)]
-        public string? Department { get; set; }
+        public string? Department { get; set; }     
 
         [Required(ErrorMessage = "Статус обязателен")]
         public ErpStatus Status { get; set; }
@@ -34,6 +34,10 @@ namespace Purchase.Data
 
         [Required]
         public Priorities Priority { get; set; } = Priorities.Medium;
+
+        // НОВОЕ: Связь с пользователем
+        public int? UserId { get; set; }
+        public virtual User? User { get; set; }
 
         [NotMapped]
         public int PositionsCount => Materials?.Count ?? 0;

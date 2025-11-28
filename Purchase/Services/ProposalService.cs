@@ -17,23 +17,34 @@ public class ProposalService : IProposalService
         return await _contextFactory.CreateDbContextAsync();
     }
 
-    public async Task CreateAsync(Proposal newProposal)
+    public async Task CreateAsync(Proposal newProposal, int? userId = null)
+{
+    // Валидация
+    if (!await ValidateProposalAsync(newProposal))
+        throw new ArgumentException("Некорректные данные заявки");
+
+    await using var context = await CreateDbContextAsync();
+
+    if (userId.HasValue)
     {
-        // Валидация
-        if (!await ValidateProposalAsync(newProposal))
-            throw new ArgumentException("Некорректные данные заявки");
-
-        await using var context = await CreateDbContextAsync();
-
-        if (newProposal.DateCreation == default)
-            newProposal.DateCreation = DateTime.Now;
-
-        if (string.IsNullOrWhiteSpace(newProposal.Number))
-            newProposal.Number = await GenerateProposalNumberAsync();
-
-        await context.Proposals.AddAsync(newProposal);
-        await context.SaveChangesAsync();
+        var user = await context.Users.FindAsync(userId.Value);
+        if (user != null)
+        {
+            newProposal.UserId = user.ID;
+            newProposal.Author = user.FullName;     
+            newProposal.Department = user.Department; 
+        }
     }
+
+    if (newProposal.DateCreation == default)
+        newProposal.DateCreation = DateTime.Now;
+
+    if (string.IsNullOrWhiteSpace(newProposal.Number))
+        newProposal.Number = await GenerateProposalNumberAsync();
+
+    await context.Proposals.AddAsync(newProposal);
+    await context.SaveChangesAsync();
+}
 
     public async Task<List<Proposal>> GetAllProposalsAsync()
     {
@@ -189,7 +200,7 @@ public class ProposalService : IProposalService
 
 public interface IProposalService
 {
-    Task CreateAsync(Proposal newProposal);
+    Task CreateAsync(Proposal newProposal, int? userId);
     Task<List<Proposal>> GetAllProposalsAsync();
     Task<Proposal?> GetByIdAsync(int id);
     Task UpdateAsync(Proposal updatedProposal);

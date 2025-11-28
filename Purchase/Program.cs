@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Purchase.Data;
 using Purchase.Services;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Базовая конфигурация

@@ -23,7 +23,8 @@ namespace Purchase.Data
                 PasswordSalt = salt,
                 FullName = "Администратор системы",
                 Role = UserRole.Admin,
-                CreatedAt = DateTime.Now,
+                CreatedAt = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time")),
                 IsActive = true
             };
 

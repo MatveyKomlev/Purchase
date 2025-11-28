@@ -35,6 +35,11 @@ namespace Purchase.Data
                 entity.Property(p => p.Explanation).HasMaxLength(1000);
 
                 entity.Ignore(p => p.PositionsCount);
+
+                entity.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
+             .OnDelete(DeleteBehavior.SetNull);
             });
 
             modelBuilder.Entity<ProposalMaterial>(entity =>

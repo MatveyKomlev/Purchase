@@ -421,42 +421,43 @@
         }
     }
 
-    private async Task SaveProposal()
+   private async Task SaveProposal()
+{
+    if (validations == null) return;
+
+    try
     {
-        if (validations == null) return;
+        isSaving = true;
+        StateHasChanged();
 
-        try
+        if (await validations.ValidateAll())
         {
-            isSaving = true;
-            StateHasChanged();
 
-            if (await validations.ValidateAll())
+            var userId = await AuthService.GetUserIdAsync();
+            
+            if (isEdit)
             {
-                if (isEdit)
-                {
-                    await PurchaseService.UpdateAsync(proposalModel);
-                    await ShowSuccess("Заявка успешно обновлена");
-                }
-                else
-                {
-                    await PurchaseService.CreateAsync(proposalModel);
-                    await ShowSuccess("Заявка успешно создана");
-                }
-
-                CloseModal();
-                await LoadProposals();
+                await PurchaseService.UpdateAsync(proposalModel);
+                await ShowSuccess("Заявка успешно обновлена");
+            }
+            else
+            {
+        
+                await PurchaseService.CreateAsync(proposalModel, userId);
+                await ShowSuccess("Заявка успешно создана");
             }
         }
-        catch (Exception ex)
-        {
-            await ShowError($"Ошибка сохранения: {ex.Message}");
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
     }
+    catch (Exception ex)
+    {
+        await ShowError($"Ошибка сохранения: {ex.Message}");
+    }
+    finally
+    {
+        isSaving = false;
+        StateHasChanged();
+    }
+}
 
     private async Task DeleteProposal(int id)
     {

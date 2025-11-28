@@ -32,6 +32,7 @@ namespace Purchase.Services
                 await using var context = await _contextFactory.CreateDbContextAsync();
 
                 var user = await context.Users
+                    .AsNoTracking() // Важно: не отслеживаем сущность
                     .FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
 
                 if (user == null)
@@ -41,8 +42,6 @@ namespace Purchase.Services
                 }
 
                 await _jsRuntime.InvokeVoidAsync("console.log", "✅ User found:", user.Username);
-                await _jsRuntime.InvokeVoidAsync("console.log", "🔑 Stored password:", user.PasswordHash);
-                await _jsRuntime.InvokeVoidAsync("console.log", "🔑 Input password:", password);
 
                 // ПРОСТАЯ ПРОВЕРКА - сравниваем как есть
                 bool passwordValid = (user.PasswordHash == password);
@@ -57,7 +56,7 @@ namespace Purchase.Services
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "userRole", user.Role.ToString());
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "userId", user.ID.ToString());
 
-                    // ОБНОВЛЯЕМ ВРЕМЯ ВХОДА (исправленная версия)
+                    // Обновляем LastLogin в ОТДЕЛЬНОМ контексте
                     await UpdateLastLoginAsync(user.ID);
 
                     await _jsRuntime.InvokeVoidAsync("console.log", "✅ Login successful!");
@@ -82,12 +81,15 @@ namespace Purchase.Services
         {
             try
             {
-                await using var context = await _contextFactory.CreateDbContextAsync();
-                var user = await context.Users.FindAsync(userId);
+                // Используем ОТДЕЛЬНЫЙ контекст для обновления
+                await using var updateContext = await _contextFactory.CreateDbContextAsync();
+
+                var user = await updateContext.Users.FindAsync(userId);
                 if (user != null)
                 {
-                    user.LastLogin = DateTime.Now;
-                    await context.SaveChangesAsync();
+                    user.LastLogin = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow,
+                        TimeZoneInfo.FindSystemTimeZoneById("Russian Standard Time"));
+                    await updateContext.SaveChangesAsync();
                     await _jsRuntime.InvokeVoidAsync("console.log", "✅ Last login updated");
                 }
             }
