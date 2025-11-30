@@ -8,6 +8,8 @@ namespace Purchase.Data
         public DbSet<ProposalMaterial> ProposalMaterials { get; set; }
         public DbSet<ProposalCatalog> ProposalCatalogs { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<ElectronicComponent> ElectronicComponents { get; set; }
+        public DbSet<ComponentStandard> ComponentStandards { get; set; }
 
         public PurchaseContext(DbContextOptions<PurchaseContext> options) : base(options)
         { }
@@ -118,6 +120,36 @@ namespace Purchase.Data
                       .IsUnique();
 
                 entity.HasIndex(u => u.Email)
+                      .IsUnique();
+            });
+
+            modelBuilder.Entity<ElectronicComponent>(entity =>
+            {
+                entity.Property(ec => ec.ComplianceStatus)
+                      .HasConversion<string>()
+                      .HasMaxLength(20);
+
+                entity.Property(ec => ec.ManufacturerPartNumber)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.HasIndex(ec => ec.ManufacturerPartNumber)
+                      .IsUnique();
+
+                // Связь многие-ко-многим со стандартами
+                entity.HasMany(ec => ec.Standards)
+                      .WithMany()
+                      .UsingEntity(j => j.ToTable("ComponentStandardRelations"));
+            });
+
+            // Конфигурация для ComponentStandard
+            modelBuilder.Entity<ComponentStandard>(entity =>
+            {
+                entity.Property(cs => cs.Type)
+                      .HasConversion<string>()
+                      .HasMaxLength(30);
+
+                entity.HasIndex(cs => cs.Code)
                       .IsUnique();
             });
         }

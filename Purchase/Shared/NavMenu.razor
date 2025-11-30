@@ -21,6 +21,7 @@
 
         @if (isAuthenticated)
         {
+            <!-- Основные модули -->
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="proposals">
                     <span class="oi oi-plus" aria-hidden="true"></span> Список заявок
@@ -38,6 +39,27 @@
                     <span class="oi oi-book" aria-hidden="true"></span> Справочник
                 </NavLink>
             </div>
+
+            <!-- НОВЫЕ МОДУЛИ - ИНТЕГРАЦИЯ И СООТВЕТСТВИЕ -->
+            <div class="nav-section-divider"></div>
+            
+            <div class="nav-section-header px-3">
+                <small class="text-muted">ИНТЕГРАЦИЯ И АНАЛИТИКА</small>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="component-search">
+                    <span class="oi oi-magnifying-glass" aria-hidden="true"></span> Поиск компонентов
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="compliance-check">
+                    <span class="oi oi-task" aria-hidden="true"></span> Проверка
+                </NavLink>
+            </div>
+
+           
         }
         else
         {
@@ -46,9 +68,39 @@
                     <span class="oi oi-account-login" aria-hidden="true"></span> Вход в систему
                 </NavLink>
             </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="register">
+                    <span class="oi oi-person" aria-hidden="true"></span> Регистрация
+                </NavLink>
+            </div>
         }
     </nav>
 </div>
+
+<style>
+    .nav-section-divider {
+        height: 1px;
+        background-color: rgba(255,255,255,0.1);
+        margin: 10px 15px;
+    }
+
+    .nav-section-header {
+        padding-top: 15px;
+        padding-bottom: 5px;
+    }
+
+    .nav-section-header small {
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+
+    .nav-scrollable {
+        height: calc(100vh - 60px);
+        overflow-y: auto;
+    }
+</style>
 
 @code {
     private bool collapseNavMenu = true;
@@ -69,7 +121,7 @@
             isAuthenticated = await AuthService.IsAuthenticatedAsync();
             isInitialized = true;
             StateHasChanged();
-            await Task.Delay(1); // Добавляем await для асинхронности
+            await Task.Delay(1);
         }
     }
 

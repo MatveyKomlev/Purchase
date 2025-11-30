@@ -1,0 +1,69 @@
+﻿@using Purchase.Data
+
+<div class="component-details">
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Основная информация</h5>
+            <table class="table table-sm">
+                <tr>
+                    <td><strong>Артикул:</strong></td>
+                    <td>@Component?.ManufacturerPartNumber</td>
+                </tr>
+                <tr>
+                    <td><strong>Производитель:</strong></td>
+                    <td>@Component?.Manufacturer</td>
+                </tr>
+                <tr>
+                    <td><strong>Описание:</strong></td>
+                    <td>@Component?.Description</td>
+                </tr>
+                <tr>
+                    <td><strong>Локализация:</strong></td>
+                    <td>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar @GetProgressBarClass(Component?.LocalizationPercent ?? 0)" 
+                                 style="width: @(Component?.LocalizationPercent ?? 0)%">
+                                @(Component?.LocalizationPercent ?? 0)%
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="col-md-6">
+            <h5>Соответствие</h5>
+            <ComplianceBadge Status="@Component?.ComplianceStatus" />
+            
+            @if (Component?.DatasheetUrl != null)
+            {
+                <div class="mt-2">
+                    <a href="@Component.DatasheetUrl" target="_blank" class="btn btn-outline-primary btn-sm">
+                        📄 Datasheet
+                    </a>
+                </div>
+            }
+
+            @if (Component?.Standards?.Any() == true)
+            {
+                <div class="mt-3">
+                    <h6>Стандарты:</h6>
+                    @foreach (var standard in Component.Standards)
+                    {
+                        <span class="badge bg-secondary me-1">@standard.Code</span>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public ElectronicComponent? Component { get; set; }
+
+    private string GetProgressBarClass(int percent)
+    {
+        return percent >= 60 ? "bg-success" : 
+               percent >= 30 ? "bg-warning" : "bg-danger";
+    }
+}

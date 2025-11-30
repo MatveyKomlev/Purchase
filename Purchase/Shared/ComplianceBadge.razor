@@ -1,0 +1,31 @@
+﻿@using Purchase.Data
+
+@if (Status.HasValue)
+{
+    <span class="badge @GetBadgeClass(Status.Value)">
+        @GetStatusDisplayName(Status.Value)
+    </span>
+}
+
+@code {
+    [Parameter] public ComplianceStatus? Status { get; set; }
+
+    private string GetBadgeClass(ComplianceStatus status)
+    {
+        return status switch
+        {
+            ComplianceStatus.Compliant => "bg-success",
+            ComplianceStatus.NeedsReview => "bg-warning",
+            ComplianceStatus.NonCompliant => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusDisplayName(ComplianceStatus status)
+    {
+        var field = status.GetType().GetField(status.ToString());
+        var attribute = (System.ComponentModel.DataAnnotations.DisplayAttribute)
+            Attribute.GetCustomAttribute(field, typeof(System.ComponentModel.DataAnnotations.DisplayAttribute));
+        return attribute?.Name ?? status.ToString();
+    }
+}

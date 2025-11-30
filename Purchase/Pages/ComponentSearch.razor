@@ -1,0 +1,222 @@
+﻿@page "/component-search"
+@using Purchase.Data
+@using Purchase.Services
+@inject ComponentIntegrationService IntegrationService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Поиск компонентов - Purchase</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>🔍 Поиск электронных компонентов</h2>
+            <p class="text-muted">Поиск по LCSC коду через внешние API</p>
+        </div>
+    </div>
+
+    <!-- Форма поиска -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="input-group">
+                <input @bind="searchQuery" @bind:event="oninput"
+                       class="form-control" placeholder="Введите LCSC код (например: C72038)" />
+                <button @onclick="SearchComponent" class="btn btn-primary" disabled="@isSearching">
+                    @if (isSearching)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Поиск
+                </button>
+            </div>
+            <div class="form-text">
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты поиска -->
+    @if (searchResult != null)
+    {
+        <div class="row">
+            <div class="col-12">
+                @if (searchResult.Success && searchResult.Component != null)
+                {
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">✅ Найден компонент</h5>
+                            <small>Источник: @searchResult.Source</small>
+                        </div>
+                        <div class="card-body">
+                            <div class="component-details">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5>Основная информация</h5>
+                                        <table class="table table-sm">
+                                            <tr>
+                                                <td><strong>LCSC код:</strong></td>
+                                                <td>@searchResult.Component.ManufacturerPartNumber</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Производитель:</strong></td>
+                                                <td>@searchResult.Component.Manufacturer</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Описание:</strong></td>
+                                                <td>@searchResult.Component.Description</td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Локализация:</strong></td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar @GetProgressBarClass(searchResult.Component.LocalizationPercent)"
+                                                             style="width: @(searchResult.Component.LocalizationPercent)%">
+                                                            @(searchResult.Component.LocalizationPercent)%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <h5>Соответствие</h5>
+                                        <ComplianceBadge Status="@searchResult.Component.ComplianceStatus" />
+
+                                        @if (!string.IsNullOrEmpty(searchResult.Component.DatasheetUrl))
+                                        {
+                                            <div class="mt-2">
+                                                <a href="@searchResult.Component.DatasheetUrl" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                    📄 Datasheet
+                                                </a>
+                                            </div>
+                                        }
+
+                                        @if (searchResult.Component.Standards?.Any() == true)
+                                        {
+                                            <div class="mt-3">
+                                                <h6>Стандарты:</h6>
+                                                @foreach (var standard in searchResult.Component.Standards)
+                                                {
+                                                    <span class="badge bg-secondary me-1">@standard.Code</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-4">
+                                <button @onclick="() => ImportComponent(searchResult.Component)"
+                                        class="btn btn-success me-2">
+                                    📥 Импортировать в каталог
+                                </button>
+                                <button @onclick="ClearSearch" class="btn btn-outline-secondary">
+                                    🔍 Новый поиск
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger">
+                        <h5>❌ Ошибка поиска</h5>
+                        <p>@searchResult.ErrorMessage</p>
+                        <button @onclick="ClearSearch" class="btn btn-outline-danger">
+                            Попробовать снова
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Сообщение об импорте -->
+    @if (!string.IsNullOrEmpty(importMessage))
+    {
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    @importMessage
+                    <button @onclick="ClearImportMessage" class="btn-close float-end"></button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string searchQuery = "";
+    private ComponentSearchResult? searchResult;
+    private string importMessage = "";
+    private bool isSearching = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "🔄 ComponentSearch component rendered");
+        }
+    }
+
+    private async Task SearchComponent()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+            return;
+
+        isSearching = true;
+        searchResult = null;
+        importMessage = "";
+        StateHasChanged();
+
+        await JSRuntime.InvokeVoidAsync("console.log", "🔍 Searching component:", searchQuery);
+
+        searchResult = await IntegrationService.SearchComponentAsync(searchQuery.Trim().ToUpper());
+
+        await JSRuntime.InvokeVoidAsync("console.log", "📋 Search result:", searchResult?.Success);
+
+        isSearching = false;
+        StateHasChanged();
+    }
+
+    private async Task ImportComponent(ElectronicComponent component)
+    {
+        await JSRuntime.InvokeVoidAsync("console.log", "📥 Importing component:", component.ManufacturerPartNumber);
+
+        // Теперь передаем только компонент, цены рассчитываются внутри сервиса
+        var result = await IntegrationService.ImportToCatalogAsync(component);
+
+        if (result.Success)
+        {
+            importMessage = $"✅ {result.Message}";
+            searchResult = null;
+            searchQuery = "";
+        }
+        else
+        {
+            importMessage = $"❌ {result.ErrorMessage}";
+        }
+
+        StateHasChanged();
+    }
+
+    private void ClearSearch()
+    {
+        searchResult = null;
+        searchQuery = "";
+        importMessage = "";
+        StateHasChanged();
+    }
+
+    private void ClearImportMessage()
+    {
+        importMessage = "";
+        StateHasChanged();
+    }
+
+    private string GetProgressBarClass(int percent)
+    {
+        return percent >= 60 ? "bg-success" :
+               percent >= 30 ? "bg-warning" : "bg-danger";
+    }
+}

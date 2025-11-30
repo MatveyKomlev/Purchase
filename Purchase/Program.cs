@@ -30,6 +30,10 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<SimpleAuthService>();
 builder.Services.AddScoped<AuthenticationStateProvider, SimpleAuthStateProvider>();
 
+builder.Services.AddScoped<ComponentIntegrationService>();
+builder.Services.AddScoped<ComplianceService>();
+builder.Services.AddHttpClient(); // Для HTTP запросов к API
+
 // Blazorise
 builder.Services
     .AddBlazorise(options =>
