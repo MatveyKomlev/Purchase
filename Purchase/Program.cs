@@ -34,6 +34,8 @@ builder.Services.AddScoped<ComponentIntegrationService>();
 builder.Services.AddScoped<ComplianceService>();
 builder.Services.AddHttpClient(); // Для HTTP запросов к API
 
+builder.Services.AddScoped<DataGeneratorService>();
+
 // Blazorise
 builder.Services
     .AddBlazorise(options =>

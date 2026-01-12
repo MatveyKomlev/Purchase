@@ -1,0 +1,169 @@
+﻿@page "/load-test"
+@using Microsoft.EntityFrameworkCore
+@using Purchase.Data
+@using Purchase.Services
+@inject DataGeneratorService DataGenerator
+@inject IDbContextFactory<PurchaseContext> ContextFactory
+
+<PageTitle>Нагрузочное тестирование - Purchase</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>🧪 Нагрузочное тестирование</h2>
+            <p class="text-muted">Генерация тестовых данных для проверки производительности</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Генерация данных</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Пользователей:</label>
+                        <input @bind="usersCount" type="number" class="form-control" min="1" max="1000" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Заявок:</label>
+                        <input @bind="proposalsCount" type="number" class="form-control" min="1" max="5000" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Компонентов:</label>
+                        <input @bind="componentsCount" type="number" class="form-control" min="1" max="10000" />
+                    </div>
+
+                    <button @onclick="GenerateData" class="btn btn-primary" disabled="@isGenerating">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Сгенерировать тестовые данные
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(message))
+                    {
+                        <div class="alert alert-info mt-3">
+                            @message
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Статистика БД</h5>
+                </div>
+                <div class="card-body">
+                    @if (stats != null)
+                    {
+                        <table class="table table-sm">
+                            <tr><td>👥 Пользователей:</td><td><strong>@stats.UsersCount</strong></td></tr>
+                            <tr><td>📋 Заявок:</td><td><strong>@stats.ProposalsCount</strong></td></tr>
+                            <tr><td>🔧 Компонентов:</td><td><strong>@stats.ComponentsCount</strong></td></tr>
+                            <tr><td>📦 Материалов:</td><td><strong>@stats.MaterialsCount</strong></td></tr>
+                            <tr><td>🏷️ Стандартов:</td><td><strong>@stats.StandardsCount</strong></td></tr>
+                        </table>
+                    }
+
+                    <button @onclick="LoadStats" class="btn btn-outline-secondary">
+                        Обновить статистику
+                    </button>
+
+                    <div class="mt-3">
+                        <button @onclick="ClearDatabase" class="btn btn-outline-danger btn-sm">
+                            🗑️ Очистить БД
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int usersCount = 50;
+    private int proposalsCount = 200;
+    private int componentsCount = 500;
+    private bool isGenerating = false;
+    private string message = "";
+    private DatabaseStats? stats;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStats();
+    }
+
+    private async Task GenerateData()
+    {
+        isGenerating = true;
+        message = "🔄 Генерация данных...";
+        StateHasChanged();
+
+        try
+        {
+            await DataGenerator.GenerateTestDataAsync(usersCount, proposalsCount, componentsCount);
+            message = $"✅ Успешно создано: {usersCount} пользователей, {proposalsCount} заявок, {componentsCount} компонентов";
+            await LoadStats();
+        }
+        catch (Exception ex)
+        {
+            message = $"❌ Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            isGenerating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadStats()
+    {
+        await using var context = await ContextFactory.CreateDbContextAsync();
+
+        stats = new DatabaseStats
+        {
+            UsersCount = await context.Users.CountAsync(),
+            ProposalsCount = await context.Proposals.CountAsync(),
+            ComponentsCount = await context.ElectronicComponents.CountAsync(),
+            MaterialsCount = await context.ProposalMaterials.CountAsync(),
+            StandardsCount = await context.ComponentStandards.CountAsync()
+        };
+
+        StateHasChanged();
+    }
+
+    private async Task ClearDatabase()
+    {
+        await using var context = await ContextFactory.CreateDbContextAsync();
+
+        context.ProposalMaterials.RemoveRange(context.ProposalMaterials);
+        context.Proposals.RemoveRange(context.Proposals);
+        context.ElectronicComponents.RemoveRange(context.ElectronicComponents);
+
+        // Оставляем только admin пользователя
+        var usersToDelete = context.Users.Where(u => u.Username != "admin");
+        context.Users.RemoveRange(usersToDelete);
+
+        await context.SaveChangesAsync();
+
+        message = "🗑️ База данных очищена!";
+        await LoadStats();
+        StateHasChanged();
+    }
+
+    private class DatabaseStats
+    {
+        public int UsersCount { get; set; }
+        public int ProposalsCount { get; set; }
+        public int ComponentsCount { get; set; }
+        public int MaterialsCount { get; set; }
+        public int StandardsCount { get; set; }
+    }
+}

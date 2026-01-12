@@ -125,7 +125,35 @@ public class ProposalService : IProposalService
             .CountAsync(pm => pm.ProposalId == proposalId);
     }
 
-    public async Task<bool> ValidateProposalAsync(Proposal proposal)
+    public async Task<List<Proposal>> GetUserProposalsAsync(int userId, bool isAdmin = false)
+    {
+        await using var context = await CreateDbContextAsync();
+
+        var query = context.Proposals
+            .Include(p => p.Materials)
+            .ThenInclude(m => m.Catalog)
+            .AsQueryable();
+
+        // Если не админ - показываем только свои заявки
+        if (!isAdmin)
+        {
+            query = query.Where(p => p.UserId == userId);
+        }
+
+        return await query
+            .OrderByDescending(p => p.DateCreation)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<List<Proposal>> GetProposalsForCurrentUserAsync(int? userId, bool isAdmin)
+    {
+        if (userId == null) return new List<Proposal>();
+
+        return await GetUserProposalsAsync(userId.Value, isAdmin);
+    }
+
+        public async Task<bool> ValidateProposalAsync(Proposal proposal)
     {
         if (proposal == null) return false;
 
